@@ -164,17 +164,13 @@ void dpm::cindices(int &ci, int &vi, int gi) {
 // get cell area
 double dpm::volume(int ci) {
 	// local variables
-	int nf, ns1, ns2, ns3, gi, nvtmp, s_idx_start, ns_start;
-	double dx, dy, xi, yi, xip1, yip1, V = 0.0;
+	int nf, ns1, ns2, ns3, gi, s_idx_start, ns_start;
+	double V = 0.0;
     double             x1, y1, z1;
     double             x2, y2, z2;
     double             x3, y3, z3;
-    double             x4, y4, z4;
     double             dx12, dy12, dz12;
     double             dx13, dy13, dz13;
-    double             dx14, dy14, dz14;
-    double             dx32, dy32, dz32;
-    double             dx34, dy34, dz34;
     double             Ax, Ay, Az;
     vector<double>     px(NVTOT, 0.0), py(NVTOT, 0.0), pz(NVTOT, 0.0);
     
@@ -223,12 +219,8 @@ double dpm::area(int ci) {
     double             x1, y1, z1;
     double             x2, y2, z2;
     double             x3, y3, z3;
-    double             x4, y4, z4;
     double             dx12, dy12, dz12;
     double             dx13, dy13, dz13;
-    double             dx14, dy14, dz14;
-    double             dx32, dy32, dz32;
-    double             dx34, dy34, dz34;
     double             Ax, Ay, Az;
     int gi, ns_start, nf, ns1, ns2, ns3, s_idx_start;
     vector<double>     px(NVTOT, 0.0), py(NVTOT, 0.0), pz(NVTOT, 0.0);
@@ -414,7 +406,6 @@ double dpm::vertexPreferredPackingFraction3D() {
 void dpm::initializeVertexShapeParameters(int ci, double calA0, double lenscale) {
 	// local variables
 	int gi, vi, nvtmp;
-	double calA0tmp, calAntmp;
 
 	// check that vertDOF has been assigned
 	if (NVTOT <= 0){
@@ -447,10 +438,6 @@ void dpm::initializeVertexShapeParameters(int ci, double calA0, double lenscale)
 
 	V0.at(ci) = 1.0;
 
-	// shape parameter
-	calAntmp = nvtmp * tan(PI / nvtmp) / PI;
-	calA0tmp = calA0 * calAntmp;
-
 	// vertex radii
 	gi = szList.at(ci);
     for (vi = 0; vi < nvtmp; vi++) {
@@ -461,13 +448,14 @@ void dpm::initializeVertexShapeParameters(int ci, double calA0, double lenscale)
             r.at(gi + vi) = D0_inter_unit * lenscale;
         }
     }
+    
 }
 
 // initialize neighbor linked list
 void dpm::initializeNeighborLinkedList3D(double boxLengthScale) {
 	// local variables
 	double llscale;
-	int i, d, nntmp, scx, scy, scz, boxid;
+	int i, d, scx, scy, scz, boxid;
     
 	// print to console
 	//cout << "** initializing neighbor linked list, boxLengthScale = " << boxLengthScale;
@@ -635,64 +623,6 @@ void dpm::scaleParticleSizes3D(double scaleFactor) {
     }
 }
 
-// remove rattlers from contact network, return number of rattlers
-int dpm::removeRattlers() {
-	// local variables
-	int ci, cj, ctmp, rvv, rcc, nr, nm = 1;
-
-	// loop over rows, eliminate contacts to rattlers until nm = 0
-	while (nm > 0) {
-		// reset number of rattlers
-		nr = 0;
-
-		// number of "marginal" rattlers to be removed
-		nm = 0;
-		for (ci = 0; ci < NCELLS; ci++) {
-			// get number of contacts on cell ci
-			rvv = 0;
-			rcc = 0;
-			for (cj = 0; cj < NCELLS; cj++) {
-				if (ci != cj) {
-					if (ci > cj)
-						ctmp = cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2];
-					else
-						ctmp = cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2];
-				}
-				else
-					ctmp = 0;
-
-				rvv += ctmp;
-				if (ctmp > 0)
-					rcc++;
-			}
-
-			// check to see if particle should be removed from network
-			if (rcc <= NDIM && rvv <= 3) {
-				// increment # of rattlers
-				nr++;
-
-				// if in contact, remove contacts
-				if (rvv > 0) {
-					nm++;
-
-					for (cj = 0; cj < NCELLS; cj++) {
-						// delete contact between ci and cj
-						if (ci != cj) {
-							if (ci > cj)
-								cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2] = 0;
-							else
-								cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2] = 0;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// return total number of rattlers
-	return nr;
-}
-
 /******************************
 
 	D P M  F O R C E 
@@ -700,13 +630,6 @@ int dpm::removeRattlers() {
 			U P D A T E S
 
 *******************************/
-
-void dpm::resetForcesAndEnergy() {
-	fill(F.begin(), F.end(), 0.0);
-	fill(stress.begin(), stress.end(), 0.0);
-	U = 0.0;
-}
-
 
 /******************************
 
@@ -717,27 +640,5 @@ void dpm::resetForcesAndEnergy() {
 *******************************/
 
 void dpm::setdt(double dt0) {
-	// local variables
-	int i;
-	double ta, tv, tb, tmin, rho0;
-
-	// typical length
-	rho0 = sqrt(V0.at(0));
-
-	// set typical time scales
-	tv = rho0 / sqrt(kv);
-	ta = (rho0 * V0.at(0)) / sqrt(kv * ka);
-	tb = (rho0 * V0.at(0)) / sqrt(kv * kb);
-
-	// set main time scale as min
-	tmin = 1e8;
-	if (ta < tmin)
-		tmin = ta;
-	if (tv < tmin)
-		tmin = tv;
-	if (tb < tmin)
-		tmin = tb;
-
-	// set dt
-	dt = dt0 * tmin;
+	dt = dt0;
 }

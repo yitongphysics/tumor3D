@@ -19,7 +19,7 @@ using namespace std;
 
 
 // read-in constructor
-tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(2) {
+tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(3) {
     // open file
     ifstream inputobj(inputFileStr.c_str());
     if (!inputobj.is_open()){
@@ -28,7 +28,7 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(2) {
     }
 
     // set variables to default
-    gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; rho0=0.0; rhot=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1;
+    gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; rho0=0.0; rhot=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1;  pbc[2]=1;
 
     // local variables
     int nvtmp, ci, vi, i;
@@ -37,7 +37,7 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(2) {
     double s1, s2, s3;
     double wp1, wp2;
     double V0tmp, psitmp, a0tmp;
-    double xtmp, ytmp, rtmp, vxtmp, vytmp;
+    double xtmp, ytmp, ztmp, rtmp, vxtmp, vytmp, vztmp;
     string inputStr;
 
     // LINE 1: should be NEWFR
@@ -78,15 +78,16 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(2) {
     getline(inputobj, inputStr);
     sscanf(inputStr.c_str(),"BOXSZ %lf %lf %lf",&lxtmp,&lytmp,&wpostmp);
     //cout << "\t ** " << inputStr << endl;
-    
+    /*
     if (wpostmp!=0) {
         if (abs(log10(abs(wpostmp)))>3 || abs(wpostmp)>4) {
             wpostmp = 0;
         }
     }
-    
+    */
     L.at(0) = lxtmp;
     L.at(1) = lytmp;
+    L.at(2) = lytmp;
     wpos = wpostmp;
     // initialize stress
     getline(inputobj, inputStr);
@@ -135,7 +136,7 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(2) {
         // first parse cell info
         getline(inputobj, inputStr);
         if (ci < tN){
-            sscanf(inputStr.c_str(),"CINFO %d %*d %*d %lf %*lf %*lf %lf %*f",&nvtmp,&V0tmp,&psitmp);
+            sscanf(inputStr.c_str(),"CINFO %d %*d %*d %lf %*lf %lf %*f",&nvtmp,&V0tmp,&psitmp);
             psi.at(ci) = psitmp;
         }
         else
@@ -158,20 +159,29 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(2) {
         for (vi=0; vi<nvtmp; vi++){
             // parse vertex coordinate info
             getline(inputobj, inputStr);
-            sscanf(inputStr.c_str(),"VINFO %*d %*d %lf %lf %lf %lf %*lf %lf %lf",&xtmp,&ytmp,&rtmp,&a0tmp,&vxtmp,&vytmp);
+            sscanf(inputStr.c_str(),"VINFO %*d %*d %lf %lf %lf %lf %lf %lf %lf %lf",&xtmp,&ytmp,&ztmp,&rtmp,&a0tmp,&vxtmp,&vytmp,&vztmp);
 
             // push back
             x.push_back(xtmp);
             x.push_back(ytmp);
+            x.push_back(ztmp);
             r.push_back(rtmp);
-            //v.push_back(vxtmp);
-            //v.push_back(vytmp);
-        }
-        if (nv.at(ci)==1) {
-            V0.at(ci) = 4.0/3.0*PI*rtmp*rtmp*rtmp;
+            v.push_back(vxtmp);
+            v.push_back(vytmp);
+            v.push_back(vztmp);
         }
     }
     vertDOF = NDIM * NVTOT;
+    x.resize(vertDOF);
+    v.resize(vertDOF);
+    F.resize(vertDOF);
+    
+    // LINE last: should be ENDFR
+    getline(inputobj, inputStr);
+    if (inputStr.compare(0,5,"ENDFR") != 0){
+        cerr << "** ERROR: In tumor3D constructor, last line of input file NOT ENDFR, first line = " << inputStr << ". Ending." << endl;
+        exit(1);
+    }
     cout << "** FINISHED LOOPING OVER DATA, CLOSING INPUT FILE OBJ\n" << endl;
 
     // initialize contact network (NEED TO DO HERE, NOT DONE IN DPM CONSTRUCTOR)
@@ -224,7 +234,7 @@ void tumor3D::readPolyhedron(){
     xyz_unit.resize(3 * SNUM, 0.0);
     
     ///gpfs/gibbs/project/ohern/yz974/tumor3D/src
-    std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/DVA.txt");
+    std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
     if(pfile1.good())
     {
         pfile1 >> D0_inter_unit;
@@ -238,7 +248,7 @@ void tumor3D::readPolyhedron(){
     }
     pfile1.close();
 
-    std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/F_unit.txt");
+    std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
     if(pfile2.good())
     {
         for (int i = 0; i < FNUM; i++)
@@ -252,7 +262,7 @@ void tumor3D::readPolyhedron(){
     }
     pfile2.close();
 
-    std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/EdgeList.txt");
+    std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
     if(pfile3.good())
     {
         for (int i = 0; i < ENUM; i++)
@@ -266,7 +276,7 @@ void tumor3D::readPolyhedron(){
     }
     pfile3.close();
 
-    std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/NonNeighborList.txt");
+    std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
     if(pfile4.good())
     {
         for (int i = 0; i < NN_NUM; i++)
@@ -280,7 +290,7 @@ void tumor3D::readPolyhedron(){
     }
     pfile4.close();
 
-    std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/XYZ_unit.txt");
+    std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
     if(pfile5.good())
     {
         for(int i = 0; i < 3 * SNUM; i++)
@@ -303,44 +313,15 @@ void tumor3D::readPolyhedron(){
     I N I T I A L I Z A T I O N
 
 **********************************/
-
-//set t0
-void tumor3D::setdt(double dt0) {
-    // local variables
-    int i, ci;
-    double ta, tl, tb, tmin;
-
-    rho0 = 0;
-    for(ci=tN;ci<NCELLS;ci++){
-        rho0 +=V0[ci];
-    }
-    rho0 = rho0/(NCELLS-tN);
-    // set typical time scales
-    ta = sqrt(V0.at(0)) / sqrt(kv);
-
-    // set main time scale as min
-    tmin = 1e8;
-    if (ta < tmin)
-        tmin = ta;
-    if (tl < tmin)
-        tmin = tl;
-    if (tb < tmin)
-        tmin = tb;
-    
-    // set dt
-    dt = dt0 * tmin;
-    //dt = dt0 * ta;
-    dt = 0.03;
-}
-
 // initialize neighbor linked list: with wall position change
 void tumor3D::reNeighborLinkedList3D(double boxLengthScale) {
     // local variables
-    double llscale;
-    int i, d, nntmp, scx, scy, scz;
+    double llscale, Lx;
+    int i, d, scx, scy, scz, boxid;
 
+    Lx = L[0] - wpos;
     // print to console
-    cout << "** initializing neighbor linked list, boxLengthScale = " << boxLengthScale;
+    //cout << "** initializing neighbor linked list, boxLengthScale = " << boxLengthScale;
 
     // get largest radius as llscale
     llscale = 2.0 * (*max_element(r.begin(),r.end()));
@@ -352,14 +333,14 @@ void tumor3D::reNeighborLinkedList3D(double boxLengthScale) {
     for (d = 0; d < NDIM; d++) {
         if(d==0){
             // determine number of cells along given dimension by rmax
-            sb[d] = floor((L[d]-wpos)/ (boxLengthScale * llscale));
+            sb[d] = floor(Lx/ (boxLengthScale * llscale));
             
             // just in case, if < 3, change to 3 so box neighbor checking will work
             if (sb[d] < 3)
                 sb[d] = 3;
             
             // determine box length by number of cells
-            lb[d] = (L[d]-wpos)/ sb[d];
+            lb[d] = Lx/ sb[d];
         }
         else{
             // determine number of cells along given dimension by rmax
@@ -403,6 +384,8 @@ void tumor3D::reNeighborLinkedList3D(double boxLengthScale) {
                 for (int dx = -1; dx <= 1; ++dx) {
                     // Skip the cases that lead to double counting
                     if (dz == 0 && dy == 0 && dx <= 0) continue;
+                    if (dz == 0 && dy == -1) continue;
+                    if (dz == 0 && dy == 0 && dx == -1) continue;
 
                     int nx = ix + dx;
                     int ny = iy + dy;
@@ -419,7 +402,8 @@ void tumor3D::reNeighborLinkedList3D(double boxLengthScale) {
                     // Calculate linear neighbor index and store it in the nn vector
                     int neighbor_idx = inside_box ? (nx + ny * scx + nz * scx * scy) : -1;
                     nn[i][nn_idx] = neighbor_idx;
-
+                    
+                    
                     ++nn_idx;
                 }
             }
@@ -433,62 +417,24 @@ void tumor3D::reNeighborLinkedList3D(double boxLengthScale) {
     list.resize(NVTOT + 1);
 
 
-    
-}
-
-//get head, last, and list with wall position changing
-void tumor3D::neighborLinkedList3D() {
-    // local variables
-    int d, gi, boxid, sbtmp;
-    double xtmp;
-
-    // reset linked list info
     fill(list.begin(), list.end(), 0);
     fill(head.begin(), head.end(), 0);
     fill(last.begin(), last.end(), 0);
+    
+    for (int gi = 0; gi < NVTOT; gi++) {
+        int ix = int((x[NDIM * gi]-wpos) / Lx * scx);
+        int iy = int(x[NDIM * gi+1] / L[1] * scy);
+        int iz = int(x[NDIM * gi+2] / L[2] * scz);
 
-    // sort vertices into linked list
-    for (gi = 0; gi < NVTOT; gi++) {
-        // 1. get cell id of current particle position
-        boxid = 0;
-        sbtmp = 1;
-        for (d = 0; d < NDIM; d++) {
-            // current location
-            xtmp = x[NDIM * gi + d];
+        // Ensure the particle is within the simulation box bounds
+        if (ix >= scx) ix = scx - 1;
+        if (iy >= scy) iy = scy - 1;
+        if (iz >= scz) iz = scz - 1;
+        if (ix < 0) ix = 0;
+        if (iy < 0) iy = 0;
+        if (iz < 0) iz = 0;
 
-            // check out-of-bounds
-            if (xtmp < 0){
-                if (pbc[d])
-                    xtmp -= L[d]*floor(xtmp/L[d]);
-                else
-                    if (d==0) {
-                        if (xtmp < wpos) {
-                            xtmp = wpos + 0.00001;
-                        }
-                    } else {
-                        xtmp = 0.00001;
-                    }
-            }
-            else if (xtmp > L[d]){
-                if (pbc[d])
-                    xtmp -= L[d]*floor(xtmp/L[d]);
-                else
-                    xtmp = 0.99999*L[d];
-            }
-
-            // add d index to 1d list
-            if (d==0) {
-                boxid += floor((xtmp-wpos) / lb[d]) * sbtmp;
-            } else {
-                boxid += floor(xtmp / lb[d]) * sbtmp;
-            }
-            
-            // increment dimensional factor
-            sbtmp *= sb[d];
-        }
-        //boxid = 0;
-        // 2. add to head list or link within list
-        // NOTE: particle ids are labelled starting from 1, setting to 0 means end of linked list
+        boxid = ix + iy * scx + iz * scx * scy;
         if (head[boxid] == 0) {
             head[boxid] = gi + 1;
             last[boxid] = gi + 1;
@@ -498,19 +444,29 @@ void tumor3D::neighborLinkedList3D() {
             last[boxid] = gi + 1;
         }
     }
+    
 }
 
-// Initialize collection of tumor cells and adipocytes
-//
-// NOTE: parameters for adipocytes(tumors)
-// start with a(t) in camelCase variables
-//
-// parameters
-// -- calA0:         shape parameter
-// -- disp:         size dispersity
-// -- volumeRatio:     ratio of adipocyte preferred volume to tumor preferred areas
-// -- NV:             number of vertices on particle with average sqrt(a0)
-//
+void tumor3D::initializePolyhedron(double aCalA0){
+    int fi;
+    double A_sum, Rc;
+    
+    A_sum=0.0;
+    for (fi=0; fi<FNUM; fi++){
+        A_sum += A0_unit[fi];
+    }
+    Rc = pow(aCalA0 / (pow(A_sum, 1.5) / sqrt(PI) / 6.0), 1.0 / 3.0);
+    
+    for (fi=0; fi<FNUM; fi++){
+        A0[fi] = A0_unit[fi] * Rc * Rc;
+    }
+    
+    if (V0[tN+1] != 1.0) {
+        cout << "Preferred volume is not 1.0. Exit.";
+        exit(-1);
+    }
+    
+}
 void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aNV, int tNV){
     // local variables
     int ci, nvtmp, fi;
@@ -563,6 +519,9 @@ void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aN
     vertDOF = NDIM * NVTOT;
 
     // resize shape paramters
+    x.resize(vertDOF);
+    v.resize(vertDOF);
+    F.resize(vertDOF);
     r.resize(NVTOT);
 
     A_sum=0.0;
@@ -596,18 +555,12 @@ void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aN
         }
     }
     
-    
-    x.resize(vertDOF);
-    v.resize(vertDOF);
-    F.resize(vertDOF);
-    
-    
 }
 
 
 void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double prt, double aspectRatio){
     // local variables
-    int i, d, ci, cj, vi, vj, gi, cellDOF = NDIM * NCELLS;
+    int i, d, ci, cj, vi, gi, cellDOF = NDIM * NCELLS;
     double volumeSum, xtra = 2.0, xi, Ldiv;
     double aspect_ratio = aspectRatio;
     // local disk vectors
@@ -946,8 +899,7 @@ void tumor3D::psiDiffusion(){
 //tumor cells swim
 void tumor3D::crawlerUpdate(){
     // local variables
-    int gi, ci, cj, vi;
-    double cx, cy, rix, riy, ux, uy, psitmp, dpsi, v0tmp, rnorm;
+    int gi, ci, vi;
     // loop over all cells, vertices
     gi = 0;
     for (ci=0; ci<tN; ci++){
@@ -975,6 +927,7 @@ void tumor3D::resetForcesAndEnergy(){
     fill(stress.begin(), stress.end(), 0.0);
     fill(wpress.begin(), wpress.end(), 0.0);
     U = 0.0;
+    Udpm = 0.0;
     Ua=0.0;
     Ul=0.0;
     Ub=0.0;
@@ -983,12 +936,10 @@ void tumor3D::resetForcesAndEnergy(){
 
 void tumor3D::tumorShapeForces(){
     // compute DPM forces. Did not include forces between vertices on the same cell.
-    int         ns, ms, nc, mc, nf, ne;
-    int         ns_x, ns_y, ns_z, ms_x, ms_y, ms_z;
+    int         ns, nc, nf, ne;
     int         ns_start;
     int         s_idx_start;
-    double      KC_half     = kc / 2.0;
-    double      E_dpm;
+    //double      KC_half     = kc / 2.0;
     double      cx, cy, cz;
 
     vector<double>     px(NVTOT, 0.0), py(NVTOT, 0.0), pz(NVTOT, 0.0);
@@ -1041,7 +992,6 @@ void tumor3D::tumorShapeForces(){
     //double          ftmp, dFx, dFy, dFz;
     
     for (nc = tN; nc < NCELLS; nc++){
-        E_dpm = 0.0;
         s_idx_start = (nc-tN) * SNUM + tN;
         V = 0.0;
         com3D(nc, cx, cy, cz);
@@ -1088,7 +1038,7 @@ void tumor3D::tumorShapeForces(){
             dA = A[nf] / A0[nf] - 1.0;
             
             U += ka * dA * dA;
-            E_dpm += ka * dA * dA;
+            Udpm += ka * dA * dA;
             
             dA = dA * ka / A[nf] / A0[nf];
             FA2_x = dA * (Ay * dz13 - Az * dy13);
@@ -1115,7 +1065,7 @@ void tumor3D::tumorShapeForces(){
         // Volume force
         dV = V / V0[nc] - 1.0;
         U += kv * dV * dV;
-        E_dpm += kv * dV * dV;
+        Udpm += kv * dV * dV;
         
         dV = kv * dV / 3.0 / V0[nc];
         for (nf = 0; nf < FNUM; nf++){
@@ -1175,7 +1125,7 @@ void tumor3D::tumorShapeForces(){
                 }
 
                 U += kb * theta * theta;
-                E_dpm += kb * theta * theta;
+                Udpm += kb * theta * theta;
 
                 ns2 = face1[3 - edgelist[ne][4]] + s_idx_start;
                 ns3 = edgelist[ne][1] + s_idx_start;
@@ -1268,14 +1218,9 @@ void tumor3D::tumorShapeForces(){
 
 void tumor3D::repulsiveTumorInterfaceForces() {
     // local variables
-    int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
-    double sij, rij, xij, dx, dy, dz, xi, yi, ri;
+    int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj;
+    double sij, rij, xij, dx, dy, dz, xi, ri;
     double ftmp, fx, fy, fz;
-    double cx,cy,cz;
-    double cx2,cy2,cz2;
-
-    // sort particles
-    initializeNeighborLinkedList3D(3.0);
 
     // reset contact network
     fill(cij.begin(), cij.end(), 0);
@@ -1490,17 +1435,14 @@ void tumor3D::repulsiveTumorInterfaceForces() {
 
 void tumor3D::stickyTumorInterfaceForces(){
     // local variables
-    int ci, cj, ck, gi, gj, gk, vi, vj, vk, bi, bj, pi, pj, boxid, sbtmp;
-    double sij, rij, dx, dy, dz, xi, yi, ri;
-    double ftmp, fx, fy, fz, fxtmp, fytmp;
+    int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj;
+    double sij, rij, dx, dy, dz, xi, ri;
+    double ftmp, fx, fy, fz;
     //miu is friction constand in the 1st method or preferred velocity in the 2nd method
     vector<int> ztt(NVTOT,0);
 
     // attraction shell parameters
     double shellij, cutij, xij, kint = (kc*l1)/(l2 - l1);
-
-    // sort particles
-    //sortNeighborLinkedList3D();
 
     // reset contact network
     fill(cij.begin(), cij.end(), 0);
@@ -1523,6 +1465,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                 xij = (xi-wpos)/ri;
                 fx = kc*(1.0 - xij)/ri;
                 F[NDIM*gi] += fx;
+                
                 U += 0.5*kc*pow(1.0 - xij,2.0);
                 // update wall stress
                 wpress[0] += fx;
@@ -1532,6 +1475,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                 xij = (L[0] - xi)/ri;
                 fx = -kc*(1.0 - xij)/ri;
                 F[NDIM*gi] += fx;
+                
                 U += 0.5*kc*pow(1.0 - xij,2.0);
 
                 // update wall stresses
@@ -1590,7 +1534,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                                     
                                     // increase potential energy
                                     U += -0.5*kint*pow(1.0 + l2 - xij,2.0);
-                                    Utest+=-0.5*kint*pow(1.0 + l2 - xij,2.0);
+                                    //Utest+=-0.5*kint*pow(1.0 + l2 - xij,2.0);
                                 }
                                 else{
                                     if ((ci < tN && cj < tN) || rij < sij){
@@ -1600,7 +1544,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                                         // increase potential energy
                                         if(ci < tN && cj < tN){
                                             U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
-                                            Utest += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
+                                            //Utest += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
                                         }
                                         else{
                                             U += 0.5*kc*pow(1.0 - xij,2.0);
@@ -1720,7 +1664,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                                         
                                         // increase potential energy
                                         U += -0.5*kint*pow(1.0 + l2 - xij,2.0);
-                                        Utest+=-0.5*kint*pow(1.0 + l2 - xij,2.0);
+                                        //Utest+=-0.5*kint*pow(1.0 + l2 - xij,2.0);
                                     }
                                     else{
                                         if ((ci < tN && cj < tN) || rij < sij){
@@ -1730,7 +1674,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                                             // increase potential energy
                                             if(ci < tN && cj < tN){
                                                 U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
-                                                Utest += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
+                                                //Utest += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
                                             }
                                             else{
                                                 U += 0.5*kc*pow(1.0 - xij,2.0);
@@ -1849,8 +1793,6 @@ void tumor3D::stickyTumorInterfaceForceUpdate() {
 void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
     // local variables
     int i;
-    double cx,cy,cz;
-    double cx2,cy2,cz2;
     // check to see if cell linked-list has been initialized
     if (NBX == -1) {
         cerr << "    ** ERROR: In dpm::fire, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
@@ -1858,17 +1800,14 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
     }
 
     // FIRE variables
-    double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin, frec;
+    double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
     int npPos, npNeg, fireit;
-    double V_wall = 0.0;
+    //double V_wall = 0.0, F_wall = 0.0;
     //double P0=0.001;
     // set dt based on geometric parameters
     setdt(dt0);
 
     // Initialize FIRE variables
-    P = 0;
-    fnorm = 0;
-    vnorm = 0;
     alpha = alpha0;
 
     dtmax = 10.0 * dt;
@@ -1880,7 +1819,6 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
 
     fireit = 0;
     fcheck = 10 * Ftol;
-    frec = 0.0;
     
     // reset forces and velocities
     resetForcesAndEnergy();
@@ -1893,7 +1831,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
         P = 0.0;
         for (i = 0; i < vertDOF; i++)
             P += v[i] * F[i];
-        //P += V_wall * (P0 - wpress[0])*L[1];
+        //P += V_wall * F_wall;
         // print to console
         
         if (fireit % NSKIP == 0) {
@@ -1984,7 +1922,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
         // VV VELOCITY UPDATE #1
         for (i = 0; i < vertDOF; i++)
             v[i] += 0.5 * dt * F[i];
-        //V_wall += 0.5 * dt * (P0- wpress[0])*L[1] ;
+        //V_wall += 0.5 * dt * F_wall ;
         
         
         
@@ -1998,7 +1936,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
             
             v[i] = (v[i] > 0.001) ? 0.001 : v[i];
         }
-        //fnorm += (P0 - wpress[0])*L[1] * (P0 - wpress[0])*L[1];
+        //fnorm += F_wall * F_wall;
         //vnorm += V_wall * V_wall;
         
         fnorm = sqrt(fnorm);
@@ -2010,7 +1948,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
         if (fnorm > 0) {
             for (i = 0; i < vertDOF; i++)
                 v[i] = (1 - alpha) * v[i] + alpha * (F[i] / fnorm) * vnorm;
-            //V_wall = (1 - alpha) * V_wall + alpha * ((P0 - wpress[0])*L[1] / fnorm) * vnorm;
+            //V_wall = (1 - alpha) * V_wall + alpha * (F_wall / fnorm) * vnorm;
         }
 
         // VV POSITION UPDATE
@@ -2028,16 +1966,14 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
 
         // update forces (function passed as argument)
         // sort particles
-        //reNeighborLinkedList3D(2.0);
-        //neighborLinkedList3D();
         initializeNeighborLinkedList3D(2.0);
         CALL_MEMBER_FN(*this, forceCall)();
-        
+        //F_wall = (P0 - wpress[0]) * L[1] * L[2];
         // VV VELOCITY UPDATE #2
         for (i = 0; i < vertDOF; i++){
             v[i] += 0.5 * F[i] * dt;
         }
-        //V_wall += 0.5 * (P0 - wpress[0])*L[1] * dt;
+        //V_wall += 0.5 * F_wall * dt;
         // update fcheck based on fnorm (= force per degree of freedom)
         /*
         fcheck = 0.0;
@@ -2051,8 +1987,8 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
                 fcheck=abs(F[i]);
             }
         }
-        //if (fcheck<abs((P0 - wpress[0])*L[1])) {
-            //fcheck=abs((P0 - wpress[0])*L[1]);
+        //if (fcheck<abs(F_wall) {
+            //fcheck=abs(F_wall);
         //}
         
         // update iterator
@@ -2114,6 +2050,21 @@ void tumor3D::setupCheck(){
         cerr << "** ERROR: in setupCheck, V0.size = " << V0.size() << ", which is != NCELLS = " << NCELLS << ". Ending. " << endl;
         exit(1);
     }
+    
+    if (x.size() != vertDOF){
+        cerr << "** ERROR: in setupCheck, V0.size = " << x.size() << ", which is != vertDOF = " << vertDOF << ". Ending. " << endl;
+        exit(1);
+    }
+    
+    if (v.size() != vertDOF){
+        cerr << "** ERROR: in setupCheck, V0.size = " << v.size() << ", which is != vertDOF = " << vertDOF << ". Ending. " << endl;
+        exit(1);
+    }
+    
+    if (F.size() != vertDOF){
+        cerr << "** ERROR: in setupCheck, V0.size = " << F.size() << ", which is != vertDOF = " << vertDOF << ". Ending. " << endl;
+        exit(1);
+    }
 }
 
 
@@ -2126,12 +2077,9 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
     setupCheck();
 
     // local variables
-    int k = 0, nr;
+    int k = 0;
     double pcheck=0.0, phi0, scaleFactor = 1.0;
 
-    // initialize preferred packing fraction
-    phi0 = vertexPreferredPackingFraction3D();
-    // loop until pcheck > Ptol is found
     //warning
     //printTumorInterface(0.0);
     //updateECMAttachments(1);
@@ -2154,9 +2102,6 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
            // scaleFactor = pow((phi0 + dphi0) / phi0,-1.0/3.0);
             //scaleParticleSizes3D(scaleFactor);
         //}
-        // rescale so that mean(a0(tN+1,NCELLS))=1
-        //scaleFactor=tumorRescale(dt0);
-        //Ftol = Ftol * scaleFactor;
         tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, Ftol, dt0);
 
         // update pressure
@@ -2164,9 +2109,6 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
         
         pcheck = wpress[0];
         
-        // remove rattlers
-        nr = removeRattlers();
-
         // output to console
         cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
         cout << "===============================================" << endl << endl;
@@ -2200,31 +2142,24 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
 // invasion at constant pressure
 void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double g0, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
     
-    random_device rd;
-    mt19937 gen(rd());
+    default_random_engine gen;
     normal_distribution<double> distribution(0.0, 1.0);
+    
     // check correct setup
     setupCheck();
     
     // local variables
     int k, i, ci, gi, upb = 20000;
-    double t = 0.0, Lold, Lnew, gam;
+    double t = 0.0;
     double subBoxLength = 2.0;
     double x_max=0;
     double Vy = 0.0;
-    int press_teller,press_it=0;
-    double press_ave =0.0;
-    double dw = 0.0;
     double B = 3.0;
     double H=0.0;
-    double H_ave1 = 0.0;
-    double H_ave2 = 0.0;
     double M_wall = M;
+    double F_wall = 0.0;
     double V_wall = 0.0;
-    double K_t=0.0;
     double K=0.0;
-    double K0= 0.0;
-    double beta_K=0.0;
     vector<double> r1;
     vector<double> r2;
     double sg = sqrt(2*B*v0);
@@ -2235,9 +2170,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         r1.push_back(0.0);
         r2.push_back(0.0);
     }
-        
-    Lold = L[0];
-    Lnew = Lold;
+
     //allocation enough memory
     x.reserve(upb);
     v.reserve(upb);
@@ -2256,11 +2189,11 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     ifbroken.reserve(upb);
     
     reNeighborLinkedList3D(subBoxLength);
-    neighborLinkedList3D();
     // initial pressure
     CALL_MEMBER_FN(*this, forceCall)();
-
-    //printTumorInterface(t);
+    F_wall = (P0 - wpress[0]) * L[1] * L[2];
+    
+    printTumorInterface(t);
     for (k=0; k<NT; k++){
         // pbcs and reset forces
         for (i=0; i<vertDOF; i++){
@@ -2284,58 +2217,38 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         }
         r1.back() = distribution(gen);
         r2.back() = distribution(gen);
-        V_wall = V_wall + dt/2.0/M_wall*(P0-wpress[0])*L[1] -dt/2.0*B*V_wall + 1.0/2.0*sqrt(dt)*sg/sqrt(M_wall)*r1.back() - 1.0/8.0*dt*dt*B*((P0-wpress[0])*L[1]/M_wall-B*V_wall) - 1.0/4.0*pow(dt,1.5)*B*sg/sqrt(M_wall)*(1.0/2.0*r1.back()+1.0/sqrt(3.0)*r2.back());
+        V_wall = V_wall + dt/2.0/M_wall*F_wall -dt/2.0*B*V_wall + 1.0/2.0*sqrt(dt)*sg/sqrt(M_wall)*r1.back() - 1.0/8.0*dt*dt*B*(F_wall/M_wall-B*V_wall) - 1.0/4.0*pow(dt,1.5)*B*sg/sqrt(M_wall)*(1.0/2.0*r1.back()+1.0/sqrt(3.0)*r2.back());
         wpos += dt*V_wall + pow(dt,1.5)*sg/sqrt(M_wall)/2.0/sqrt(3.0)*r2.back();
-        //wpos += dt*(V_wall + dt/2.0/M_wall*((P0 - wpress[0])*L[1]-B*V_wall));
-        //V_wall += dt/2.0/M_wall * ((P0 - wpress[0])*L[1]-B*V_wall*(1.0+1.0/(1.0+B/2.0*dt)));
+        
         // update psi before update force
         //psiDiffusion();
         //psiECM();
         
         // sort particles
         reNeighborLinkedList3D(subBoxLength);
-        neighborLinkedList3D();
         // update forces
         CALL_MEMBER_FN(*this, forceCall)();
+        F_wall = (P0 - wpress[0]) * L[1] * L[2];
         
-        
-        /*//Euler update
-        for (i=0; i<vertDOF; i++){
-            v[i] += dt * F[i]/M;
-            x[i] += dt * v[i];
-        }
-        V_wall += dt * (P0 - wpress[0])*L[1] / M_wall;
-        wpos += dt * V_wall;
-         */
         // update velocity 2nd term (Velocity Verlet, OVERDAMPED)
         for (i=0; i<NVTOT*NDIM; i++)
             v[i] = v[i] + 1.0/2.0*dt/M*F[i] - 1.0/2.0*dt*B*v[i] + 1.0/2.0*sqrt(dt)*sg*r1[i] - 1.0/8.0*dt*dt*B*(F[i]/M - B*v[i]) - 1.0/4.0*pow(dt,1.5)*B*sg*(1.0/2.0*r1[i]+1.0/sqrt(3.0)*r2[i]);
-        V_wall = V_wall + dt/2.0/M_wall*(P0-wpress[0])*L[1] -dt/2.0*B*V_wall + 1.0/2.0*sqrt(dt)*sg/sqrt(M_wall)*r1.back() - 1.0/8.0*dt*dt*B*((P0-wpress[0])*L[1]/M_wall-B*V_wall) - 1.0/4.0*pow(dt,1.5)*B*sg/sqrt(M_wall)*(1.0/2.0*r1.back()+1.0/sqrt(3.0)*r2.back());
+        V_wall = V_wall + dt/2.0/M_wall*F_wall -dt/2.0*B*V_wall + 1.0/2.0*sqrt(dt)*sg/sqrt(M_wall)*r1.back() - 1.0/8.0*dt*dt*B*(F_wall/M_wall-B*V_wall) - 1.0/4.0*pow(dt,1.5)*B*sg/sqrt(M_wall)*(1.0/2.0*r1.back()+1.0/sqrt(3.0)*r2.back());
 
         // update time
         t += dt;
         /********************************************************************************************************************************/
         
-        //tumor cell growth and divide warning
-        //tumorGrowth(g0);
-        //tumorDivide(g0);
-        
-        // print message console, print position to file&& || k==0
-        if (((k+1) % NPRINTSKIP == 0) && (k+1)>1e6){
+        // print message console, print position to file
+        if (((k+1) % NPRINTSKIP == 0) || k==0){
             //kinetic energy
             K=0;
-            K_t=0;
-            for (int i = 0; i < NDIM*tN; i++){
-                K += v[i] * v[i];
-                K_t += v[i] * v[i];
-            }
-            for (int i = NDIM*tN; i < vertDOF; i++)
+            for (int i = 0; i < vertDOF; i++)
                 K += v[i] * v[i];
             K *= 0.5;
-            K_t *= 0.5;
             
             //H
-            H = U+P0*L[1]*(L[0]-wpos) + K + M_wall*V_wall*V_wall/2;
+            H = U+P0*L[1]*L[2]*(L[0]-wpos) + K + M_wall*V_wall*V_wall/2;
             
             // make sure Vy=0
             Vy=0.0;
@@ -2366,16 +2279,15 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
             cout << "    ** P wall        = " << wpress[0] << endl;
             cout << "    ** Lx            = " << L[0]-wpos << endl;
             cout << "   ** front          = " << x_max << endl;
-            cout << "   ** E              = " << U + K + M_wall*V_wall*V_wall/2 - wpos*P0*L[1]  << endl;
+            cout << "   ** E              = " << U + K + M_wall*V_wall*V_wall/2 - wpos*P0*L[1]*L[2]  << endl;
             cout << "   ** U              = " << U << endl;
-            cout << "   ** Ua             = " << Ua << endl;
+            cout << "   ** Udpm           = " << Udpm << endl;
             cout << "   ** Ul             = " << Ul << endl;
             cout << "   ** Kinetic        = " << K<< endl;
-            cout << "   ** Kinetic_tumor  = " << K_t << endl;
+            cout << "   ** Kinetic_tumor  = " << 0<< endl;
             cout << "   ** Kinetic_wall   = " << M_wall*V_wall*V_wall/2 << endl;
-            cout << "   ** potential_wall = " << -wpos*P0*L[1] << endl;
+            cout << "   ** potential_wall = " << -wpos*P0*L[1]*L[2] << endl;
             cout << "   ** U_tumor        = " << Utest << endl;
-            // print vertex positions to check placement
             cout << "\t** PRINTING POSITIONS TO FILE... " << endl;
             
             if ((k+1) % (NPRINTSKIP*10) == 0) {

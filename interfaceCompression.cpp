@@ -1,4 +1,5 @@
 // header files
+/*
 #include "tumor3D.h"
 #include <sstream>
 #include <numeric>
@@ -12,7 +13,7 @@ using namespace std;
 const double dphi0= 0.01;	   		// packing fraction increment during initial growth step
 const double boxLengthScale = 1.5; 	// neighbor list box size
 const double phi0 = 0.01;		   	// initial packing fraction
-const double dt0 = 5e-2;		   	// initial magnitude of time step in units of MD time
+const double dt0 = 0.03;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-7;			// force tolerance during energy min
 
 int main(int argc, char const *argv[])
@@ -39,7 +40,7 @@ int main(int argc, char const *argv[])
     string P0_str           = "1.0";
 	string seed_str 		= "17";
 	string positionFile 	= "/Users/yitongzheng/Documents/Corey/tumor3D/C.test";
-     /*
+    
     string aN_str             = argv[1];
     string aNV_str             = argv[2];
     string tNV_str             = argv[3];
@@ -57,7 +58,7 @@ int main(int argc, char const *argv[])
     string P0_str           = argv[15];
     string seed_str         = argv[16];
     string positionFile     = argv[17];
-    */
+    
 	// using sstreams to get parameters
 	stringstream aNss(aN_str);
 	stringstream aNVss(aNV_str);
@@ -135,3 +136,5 @@ int main(int argc, char const *argv[])
 	return 0;
 }
 
+
+*/

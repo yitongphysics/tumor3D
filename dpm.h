@@ -15,6 +15,8 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include <random>
+
 
 // pointer-to-member function call macro
 #define CALL_MEMBER_FN(object, ptrToMember) ((object).*(ptrToMember))
@@ -58,7 +60,8 @@ protected:
 
 	// potential energy
 	double U;
-
+    double Udpm;
+    
 	// particle spring constants
 	double kv;
 	double ka;
@@ -157,10 +160,6 @@ public:
 
 	// editing & updating
 	void scaleParticleSizes3D(double scaleFactor);
-	int removeRattlers();
-
-	// force definitions
-	void resetForcesAndEnergy();
 };
 
 #endif

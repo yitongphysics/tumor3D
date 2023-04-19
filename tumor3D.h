@@ -44,6 +44,8 @@ public:
     tumor3D(int n, int tNval, int seed) : dpm(n,seed) { tN=tNval; gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; rho0=0.0; rhot=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1; wpress.resize(2); };     // tumor+adipocyte constructor (x fixed, y periodic)
 
     void readPolyhedron();
+    void initializePolyhedron(double aCalA0);
+    
     // setters
     void setgamtt(double val) { gamtt = val; };
     void setv0(double val) { v0 = val; };
@@ -52,9 +54,7 @@ public:
     void settau(double val) { tau = val; };
     void setkecm(double val) { kecm = val; };
     void setecmbreak(double val) { ecmbreak = val; };
-    void setdt(double dt0);
     void reNeighborLinkedList3D(double boxLengthScale);
-    void neighborLinkedList3D();
 
     // initialization
     void initializeTumorInterface(double aCalA0, double volumeRatio, int aNV, int tNV);
