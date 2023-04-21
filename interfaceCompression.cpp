@@ -1,5 +1,5 @@
 // header files
-/*
+
 #include "tumor3D.h"
 #include <sstream>
 #include <numeric>
@@ -23,7 +23,8 @@ int main(int argc, char const *argv[])
 	double aDisp, tDisp, aCalA0, tCalA0, volumeRatio, prt, kv, ka, kb, kc, P0, aspectRatio;
 
 	// read in parameters from command line input
-	string aN_str 			= "3";
+    /*
+	string aN_str 			= "6";
 	string aNV_str 			= "42";
 	string tNV_str 			= "1";
 	string aDisp_str 		= "0.0";
@@ -40,7 +41,7 @@ int main(int argc, char const *argv[])
     string P0_str           = "1.0";
 	string seed_str 		= "17";
 	string positionFile 	= "/Users/yitongzheng/Documents/Corey/tumor3D/C.test";
-    
+    */
     string aN_str             = argv[1];
     string aNV_str             = argv[2];
     string tNV_str             = argv[3];
@@ -97,7 +98,7 @@ int main(int argc, char const *argv[])
     
 	// determine number of tumor cells based on volumeRatio and prt
 	//tN = round(aN * volumeRatio * (prt/(1.0 - prt)));
-    tN = 500;
+    tN = 1000;
 	NCELLS = tN + aN;
 
     cout.precision(10);
@@ -135,6 +136,3 @@ int main(int argc, char const *argv[])
 	cout << "interfaceCompression.cpp completed, interface printed to " << positionFile << ", ending. " << endl;
 	return 0;
 }
-
-
-*/

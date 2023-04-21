@@ -233,8 +233,8 @@ void tumor3D::readPolyhedron(){
     
     xyz_unit.resize(3 * SNUM, 0.0);
     
-    ///gpfs/gibbs/project/ohern/yz974/tumor3D/src
-    std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
+    //std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
+    std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
     if(pfile1.good())
     {
         pfile1 >> D0_inter_unit;
@@ -248,7 +248,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile1.close();
 
-    std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
+    //std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
+    std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
     if(pfile2.good())
     {
         for (int i = 0; i < FNUM; i++)
@@ -262,7 +263,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile2.close();
 
-    std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
+    //std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
+    std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
     if(pfile3.good())
     {
         for (int i = 0; i < ENUM; i++)
@@ -276,7 +278,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile3.close();
 
-    std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
+    //std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
+    std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
     if(pfile4.good())
     {
         for (int i = 0; i < NN_NUM; i++)
@@ -290,7 +293,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile4.close();
 
-    std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
+    //std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
+    std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
     if(pfile5.good())
     {
         for(int i = 0; i < 3 * SNUM; i++)
@@ -609,15 +613,20 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
         //dpos.at(NDIM*ci)         = ((ci-tN+1)%6)*L[0]/6.0+L[0]/12.0;
         //dpos.at(NDIM*ci + 1)     = ceil((ci-tN+1)/6.0)*L[1]/6.0-L[1]/12.0;
     }
-
+    
     // set radii of SP disks
     //if N=1
     for (ci = 0; ci < NCELLS; ci++){
         if (nv.at(ci)==1) {
             drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0);
         } else {
-            drad.at(ci) = xtra * pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0);
+            drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0) + r.at(ci);
         }
+    }
+    
+    volumeSum = 0.0;
+    for (ci=0; ci<NCELLS; ci++){
+        volumeSum += 4.0/3.0*PI*drad[ci]*drad[ci]*drad[ci];
     }
 
     // FIRE VARIABLES
@@ -627,7 +636,7 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
     double alpha = alpha0;
 
     double dt0 = 1e-2;
-    double dtmax = 10 * dt0;
+    double dtmax = 100 * dt0;
     double dtmin = 1e-8 * dt0;
 
     int npPos = 0;
@@ -772,17 +781,23 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
                     dF[NDIM*ci] += (1.0 - (xi/drad[ci]))/drad[ci];
                 //warning if (xi > Ldiv- drad[ci])
                 else if (xi > L[0] - drad[ci])
-                    dF[NDIM*ci] -= (1.0 - ((Ldiv - xi)/drad[ci]))/drad[ci];
+                    //dF[NDIM*ci] -= (1.0 - ((Ldiv - xi)/drad[ci]))/drad[ci];
+                    dF[NDIM*ci] -= (1.0 - ((L[0] - xi)/drad[ci]))/drad[ci];
             }
             else {
                 //warning:if (xi < Ldiv + drad[ci])
                 if (xi < drad[ci])
-                    dF[NDIM*ci] += (1.0 - ((xi - Ldiv)/drad[ci]))/drad[ci];
+                    //dF[NDIM*ci] += (1.0 - ((xi - Ldiv)/drad[ci]))/drad[ci];
+                    dF[NDIM*ci] += (1.0 - (xi/drad[ci]))/drad[ci];
                 else if (xi > L[0] - drad[ci])
                     dF[NDIM*ci] -= (1.0 - ((L[0] - xi)/drad[ci]))/drad[ci];
             }
         }
 
+        // FIRE step 5. Final VV update
+        for (i = 0; i < cellDOF; i++)
+            dF[i] -= 0.00001*dpos[i]*dpos[i];
+        
         // FIRE step 5. Final VV update
         for (i = 0; i < cellDOF; i++)
             dv[i] += 0.5 * dt * dF[i];
@@ -793,6 +808,13 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
             fcheck += dF[i] * dF[i];
         fcheck = sqrt(fcheck / NCELLS);
 
+        L[0] = L[0] < ((*max_element(dpos.begin(),dpos.end())) + (*max_element(drad.begin(),drad.end()))) ? L[0] : ((*max_element(dpos.begin(),dpos.end())) + (*max_element(drad.begin(),drad.end())));
+        L[1] = L[0];
+        L[2] = L[0];
+        
+        if (volumeSum/L[0]/L[1]/L[2] > 0.3) {
+            break;
+        }
         // print to console
         if (fireit % NSKIP == 0) {
             cout << endl
@@ -811,6 +833,31 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
             cout << "    ** P = " << P << endl;
             cout << "    ** Pdir = " << P / (fnorm * vnorm) << endl;
             cout << "    ** alpha = " << alpha << endl;
+            cout << "    ** phi0 = " << volumeSum/L[0]/L[1]/L[2] << endl;
+            
+            for (ci = 0; ci < NCELLS; ci++) {
+                for (vi = 0; vi < nv.at(ci); vi++) {
+                    // get global vertex index
+                    gi = gindex(ci, vi);
+
+                    // length from center to vertex
+                    if (nv.at(ci)==1) {
+                        x.at(NDIM * gi) = dpos.at(NDIM * ci);
+                        x.at(NDIM * gi + 1) = dpos.at(NDIM * ci + 1);
+                        x.at(NDIM * gi + 2) = dpos.at(NDIM * ci + 2);
+                    } else {
+                        
+                        dtmp = pow(3.0/4.0/PI*V0.at(ci), 1.0/3.0);
+                        
+                        // set positions
+                        x.at(NDIM * gi) = dtmp*xyz_unit[3*vi] + dpos.at(NDIM * ci);
+                        x.at(NDIM * gi + 1) = dtmp*xyz_unit[3*vi+1] + dpos.at(NDIM * ci + 1);
+                        x.at(NDIM * gi + 2) = dtmp*xyz_unit[3*vi+2] + dpos.at(NDIM * ci + 2);
+                    }
+                }
+            }
+            
+            printTumorInterface(0.0);
         }
 
         // update iterate
@@ -1283,15 +1330,15 @@ void tumor3D::repulsiveTumorInterfaceForces() {
                 dx = x[NDIM * gj] - x[NDIM * gi];
                 if (pbc[0])
                     dx -= L[0] * round(dx / L[0]);
-                if (dx < sij) {
+                if (abs(dx) < sij) {
                     dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
                     if (pbc[1])
                         dy -= L[1] * round(dy / L[1]);
-                    if (dy < sij) {
+                    if (abs(dy) < sij) {
                         dz = x[NDIM * gj + 2] - x[NDIM * gi + 2];
                         if (pbc[2])
                             dz -= L[2] * round(dz / L[2]);
-                        if (dz < sij) {
+                        if (abs(dz) < sij) {
                             rij = sqrt(dx * dx + dy * dy + dz * dz);
                             if (rij < sij) {
                                 // scaled distance
@@ -1366,15 +1413,15 @@ void tumor3D::repulsiveTumorInterfaceForces() {
                     dx = x[NDIM * gj] - x[NDIM * gi];
                     if (pbc[0])
                         dx -= L[0] * round(dx / L[0]);
-                    if (dx < sij) {
+                    if (abs(dx) < sij) {
                         dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
                         if (pbc[1])
                             dy -= L[1] * round(dy / L[1]);
-                        if (dy < sij) {
+                        if (abs(dy) < sij) {
                             dz = x[NDIM * gj + 2] - x[NDIM * gi + 2];
                             if (pbc[2])
                                 dz -= L[2] * round(dz / L[2]);
-                            if (dz < sij) {
+                            if (abs(dz) < sij) {
                                 rij = sqrt(dx * dx + dy * dy + dz * dz);
                                 if (rij < sij) {
                                     // scaled distance
@@ -1512,15 +1559,15 @@ void tumor3D::stickyTumorInterfaceForces(){
                 dx = x[NDIM * gj] - x[NDIM * gi];
                 if (pbc[0])
                     dx -= L[0] * round(dx / L[0]);
-                if (dx < shellij) {
+                if (abs(dx) < shellij) {
                     dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
                     if (pbc[1])
                         dy -= L[1] * round(dy / L[1]);
-                    if (dy < shellij) {
+                    if (abs(dy) < shellij) {
                         dz = x[NDIM * gj + 2] - x[NDIM * gi + 2];
                         if (pbc[2])
                             dz -= L[2] * round(dz / L[2]);
-                        if (dz < sij) {
+                        if (abs(dz) < sij) {
                             rij = sqrt(dx * dx + dy * dy + dz * dz);
                             if (rij < shellij) {
                                 // scaled distance
@@ -1642,15 +1689,15 @@ void tumor3D::stickyTumorInterfaceForces(){
                     dx = x[NDIM * gj] - x[NDIM * gi];
                     if (pbc[0])
                         dx -= L[0] * round(dx / L[0]);
-                    if (dx < shellij) {
+                    if (abs(dx) < shellij) {
                         dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
                         if (pbc[1])
                             dy -= L[1] * round(dy / L[1]);
-                        if (dy < shellij) {
+                        if (abs(dy) < shellij) {
                             dz = x[NDIM * gj + 2] - x[NDIM * gi + 2];
                             if (pbc[2])
                                 dz -= L[2] * round(dz / L[2]);
-                            if (dz < sij) {
+                            if (abs(dz) < sij) {
                                 rij = sqrt(dx * dx + dy * dy + dz * dz);
                                 if (rij < shellij) {
                                     // scaled distance
@@ -1812,7 +1859,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
 
     dtmax = 10.0 * dt;
     //1e-2
-    dtmin = 0.01 * dt;
+    dtmin = 1e-4 * dt;
 
     npPos = 0;
     npNeg = 0;
@@ -2070,7 +2117,8 @@ void tumor3D::setupCheck(){
 
 // compression with boundary forces
 void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi0){
-    int ci;
+    int ci, vi, s_idx;
+    double fx, fy, fz, ftmp, cx, cy, cz, dx, dy ,dz, dr_min, dr_max, r_min, r_max, R;
     vector<int> tN_list;
     
     // check correct setup
@@ -2084,6 +2132,88 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
     //printTumorInterface(0.0);
     //updateECMAttachments(1);
     //pcheck < Ptol
+    /*
+    scaleFactor=0.99;
+    dr_min = 2.1 * (*max_element(r.begin(),r.end()));
+    dr_max = 1.01;
+    r_max=10*dr_min;
+    while (r_max>dr_max) {
+        for(ci = 0; ci < NCELLS; ci ++){
+            if (ci<tN) {
+                r_min = NN3D(ci);
+            }
+            else{
+                r_min = 10*dr_max;
+                s_idx = szList[ci];
+                for(vi=0;vi<SNUM;vi++){
+                    R=NN3D(s_idx + vi);
+                    r_min = r_min<R ? r_min : R;
+                }
+            }
+            while (r_min > dr_max) {
+                cout <<  ci << "/" << NCELLS << ":"<<r_min << endl;
+                if (ci<tN) {
+                    com3D(ci, cx, cy, cz);
+                    R=sqrt(cx*cx+cy*cy+cz*cz);
+                    
+                    if(cx < r[ci]){
+                        break;
+                    }
+                    x[ci*NDIM] -=dr_min/R*cx*0.01;
+                    x[ci*NDIM+1] -=dr_min/R*cy*0.01;
+                    x[ci*NDIM+2] -=dr_min/R*cz*0.01;
+                    
+                    R=NN3D(ci);
+                    r_min = r_min<R ? r_min : R;
+                }
+                else{
+                    s_idx = szList[ci] * NDIM;
+                    com3D(ci, cx, cy, cz);
+                    if(cx < 1.0){
+                        break;
+                    }
+                    R=sqrt(cx*cx+cy*cy+cz*cz);
+                    dx = dr_min/R*cx*0.01;
+                    dy = dr_min/R*cy*0.01;
+                    dz = dr_min/R*cz*0.01;
+                    for(vi=0;vi<SNUM;vi++){
+                        x[s_idx + vi*NDIM] -=dx;
+                        x[s_idx + vi*NDIM + 1] -=dy;
+                        x[s_idx + vi*NDIM + 2] -=dz;
+                    }
+                    
+                    s_idx = szList[ci];
+                    for(vi=0;vi<SNUM;vi++){
+                        R=NN3D(s_idx + vi);
+                        r_min = r_min<R ? r_min : R;
+                    }
+                }
+            }
+        }
+        r_max = 0.1*dr_max;
+        for(ci = 0; ci < NCELLS; ci ++){
+            if (ci<tN) {
+                r_min = NN3D(ci);
+            }
+            else{
+                r_min = 10*dr_max;
+                s_idx = szList[ci];
+                for(vi=0;vi<SNUM;vi++){
+                    R=NN3D(s_idx + vi);
+                    r_min = r_min<R ? r_min : R;
+                }
+            }
+            r_max = r_max > r_min ? r_max : r_min;
+        }
+        k++;
+        cout << k << ": rmax = " << r_max << endl;
+        if(k>2)
+            break;
+    }
+     */
+    printTumorInterface(0.0);
+    
+    k=0;
     while (pcheck <Ptol && k < itmax) {
         // relax configuration (pass repsulive force update member function)
         // scale particle sizes
@@ -2091,12 +2221,21 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
         phi0 = vertexPreferredPackingFraction3D();
 
         if(phi0 < 0.1) {
-            scaleParticleSizes3D(0.99);
+            scaleParticleSizes3D(pow((phi0 + dphi0) / phi0,-1.0/3.0));
         }
-        else{
+        else if(phi0<0.25){
+            L[0] *= 0.99;
+            L[1] *= 0.99;
+            L[2] *= 0.99;
+        }
+        else if(phi0<1.0){
             L[0] *= 0.999;
             L[1] *= 0.999;
             L[2] *= 0.999;
+        }
+        else{
+            cout << " ** phi0 > 1.0. Compresssion might failed. Exit." << endl;
+            exit(-1);
         }
         //else{
            // scaleFactor = pow((phi0 + dphi0) / phi0,-1.0/3.0);

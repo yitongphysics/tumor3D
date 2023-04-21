@@ -347,7 +347,50 @@ void dpm::cov3D(int ci, double &vx, double &vy, double &vz) {
     }
 }
 
-
+double dpm::NN3D(int gi){
+    int gj, ci, vi, cj;
+    double R, dx, dy, dz, x1, x2, y1, y2, z1, z2;
+    double r_min=100, rj, r_max;
+    r_max = 2.0 * (*max_element(r.begin(),r.end()));
+    x1 = x[NDIM*gi];
+    y1 = x[NDIM*gi+1];
+    z1 = x[NDIM*gi+2];
+    cindices(ci, vi, gi);
+    for(gj=0;gj<NVTOT;gj++){
+        cindices(cj, vi, gj);
+        if (ci==cj) {
+            continue;
+        }
+        x2 = x[NDIM*gj];
+        y2 = x[NDIM*gj+1];
+        z2 = x[NDIM*gj+2];
+        
+        dx = x1-x2;
+        if (pbc[0])
+            dx -= L[0] * round(dx / L[0]);
+        if(dx < r_max && dx>0){
+            dy = y1-y2;
+            if (pbc[0])
+                dy -= L[1] * round(dy / L[1]);
+            if(dy<r_max && dy>0){
+                dz = z1-z2;
+                if (pbc[2])
+                    dz -= L[2] * round(dz / L[2]);
+                if(dz<r_max && dz>0){
+                    R = sqrt(dx*dx+dy*dy+dz*dz)/(r[gi]+r[gj]) ;
+                    if (r_min>R) {
+                        r_min = R;
+                        rj = r[gj];
+                    }
+                }
+            }
+        }
+                
+    }
+    
+    r_min = r_min/(r[gi]+rj) > x[gi*NDIM]/r[gi] ? x[gi*NDIM]/r[gi] : r_min/(r[gi]+rj);
+    return r_min;
+}
 
 // get configuration packing fraction
 double dpm::vertexPackingFraction3D() {
@@ -596,7 +639,8 @@ void dpm::scaleParticleSizes3D(double scaleFactor) {
     double dx, dy, dz;
     double nvtmp;
     double s_idx;
-    scaleFactor = scaleFactor < 0.99 ? 0.99 : scaleFactor;
+    double scale_min = (L[0]-r.back())/L[0];
+    scaleFactor = scaleFactor < scale_min ? scale_min : scaleFactor;
     L[0] *= scaleFactor;
     L[1] *= scaleFactor;
     L[2] *= scaleFactor;

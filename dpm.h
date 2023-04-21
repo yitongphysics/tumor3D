@@ -130,6 +130,7 @@ public:
 	void com3D(int ci, double &cx, double &cy, double &cz);
     void cof3D(int ci, double &fx, double &fy, double &fz);
     void cov3D(int ci, double &vx, double &vy, double &vz);
+    double NN3D(int gi);
 	double vertexPackingFraction3D();
 	double vertexPreferredPackingFraction3D();
 

@@ -1,4 +1,5 @@
 // header files
+
 #include "tumor3D.h"
 #include <sstream>
 
@@ -23,7 +24,7 @@ int main(int argc, char const *argv[])
     int NT, NPRINTSKIP, seed;
     double NTdbl, NPRINTSKIPdbl, l1, l2, v0, Dr0, aCalA0, kecm, ecmbreak, dDr, dPsi, Drmin, kv, ka, kb, kc, M, P0, g0;
 
-    /*
+    
     // read in parameters from command line input
     string inputFile         = argv[1];                // input file with initial configuration
     string NT_str             = argv[2];                // # of time steps
@@ -44,7 +45,7 @@ int main(int argc, char const *argv[])
     string g0_str           = argv[17];                //
     string seed_str         = argv[18];                // seed for rng
     string positionFile     = argv[19];                // output file string
-    */
+    /*
     // read in parameters from command line input
     string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/P.test";                // input file with initial configuration
     string NT_str           = "10000";                // # of time steps
@@ -61,11 +62,11 @@ int main(int argc, char const *argv[])
     string kc_str           = "0.03";             // kc
     string kb_str           = "0.0";             // kb
     string M_str            = "1.0";
-    string P0_str           = "0.0001";
+    string P0_str           = "0.01";
     string g0_str           = "0";                //
     string seed_str         = "17";                // seed for rng
     string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/P.pos";                // output file string
-
+     */
     // using sstreams to get parameters
     stringstream NTss(NT_str);
     stringstream NPRINTSKIPss(NPRINTSKIP_str);
@@ -157,3 +158,4 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
+ 
