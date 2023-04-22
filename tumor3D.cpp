@@ -233,8 +233,8 @@ void tumor3D::readPolyhedron(){
     
     xyz_unit.resize(3 * SNUM, 0.0);
     
-    //std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
-    std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
+    std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
+    //std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
     if(pfile1.good())
     {
         pfile1 >> D0_inter_unit;
@@ -248,8 +248,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile1.close();
 
-    //std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
-    std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
+    std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
+    //std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
     if(pfile2.good())
     {
         for (int i = 0; i < FNUM; i++)
@@ -263,8 +263,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile2.close();
 
-    //std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
-    std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
+    std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
+    //std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
     if(pfile3.good())
     {
         for (int i = 0; i < ENUM; i++)
@@ -278,8 +278,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile3.close();
 
-    //std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
-    std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
+    std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
+    //std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
     if(pfile4.good())
     {
         for (int i = 0; i < NN_NUM; i++)
@@ -293,8 +293,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile4.close();
 
-    //std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
-    std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
+    std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
+    //std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
     if(pfile5.good())
     {
         for(int i = 0; i < 3 * SNUM; i++)
@@ -454,13 +454,22 @@ void tumor3D::reNeighborLinkedList3D(double boxLengthScale) {
 void tumor3D::initializePolyhedron(double aCalA0){
     int fi;
     double A_sum, Rc;
+    double calA = 1.02405832074679303822506426513428;
     
     A_sum=0.0;
     for (fi=0; fi<FNUM; fi++){
         A_sum += A0_unit[fi];
     }
-    Rc = pow(aCalA0 / (pow(A_sum, 1.5) / sqrt(PI) / 6.0), 1.0 / 3.0);
+    A_sum = 11.6659313917183045106185090844519;
     
+    //V0=1
+    Rc = pow((  pow(A_sum, 1.5)/sqrt(PI)/6.0/calA  ), 1.0 / 3.0);
+    for (fi=0; fi<FNUM; fi++){
+        A0[fi] = A0_unit[fi] * Rc * Rc;
+    }
+    
+    //adjust A0 based on aCalA0
+    Rc = pow(aCalA0/calA,1.0/3.0);
     for (fi=0; fi<FNUM; fi++){
         A0[fi] = A0_unit[fi] * Rc * Rc;
     }
@@ -469,13 +478,12 @@ void tumor3D::initializePolyhedron(double aCalA0){
         cout << "Preferred volume is not 1.0. Exit.";
         exit(-1);
     }
-    
 }
 void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aNV, int tNV){
     // local variables
     int ci, nvtmp, fi;
     double lenscale, Rc, A_sum;
-
+    double calA = 1.02405832074679303822506426513428;
     // print to console
     cout << "** initializing tumor and adipocyte DPM particles in 3D..." << endl;
     cout << "** setting up nv + szList, setting shape parameters and initializing indexing ..." << endl;
@@ -527,13 +535,18 @@ void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aN
     v.resize(vertDOF);
     F.resize(vertDOF);
     r.resize(NVTOT);
-
+    
+    
     A_sum=0.0;
     for (fi=0; fi<FNUM; fi++){
         A_sum += A0_unit[fi];
     }
-    Rc = pow(aCalA0 / (pow(A_sum, 1.5) / sqrt(PI) / 6.0), 1.0 / 3.0);
+    A_sum = 11.6659313917183045106185090844519;
     
+    //V0=1
+    Rc = pow((  pow(A_sum, 1.5)/sqrt(PI)/6.0/calA  ), -1.0 / 3.0);
+    //adjust A0 based on aCalA0
+    Rc *= pow(aCalA0/calA,1.0/3.0);
     for (fi=0; fi<FNUM; fi++){
         A0[fi] = A0_unit[fi] * Rc * Rc;
     }
@@ -558,7 +571,39 @@ void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aN
             initializeVertexShapeParameters(ci,aCalA0,lenscale);
         }
     }
-    
+     
+    /*
+    A_sum=0.0;
+        for (fi=0; fi<FNUM; fi++){
+            A_sum += A0_unit[fi];
+        }
+        Rc = pow(aCalA0 / (pow(A_sum, 1.5) / sqrt(PI) / 6.0), 1.0 / 3.0);
+        
+        for (fi=0; fi<FNUM; fi++){
+            A0[fi] = A0_unit[fi] * Rc * Rc;
+        }
+        
+        // initialize particle sizes based on volumeRatio
+        for (ci=0; ci<NCELLS; ci++){
+            if (ci < tN){
+                lenscale = 1.0/pow(volumeRatio, 1.0/3.0);
+                
+                //bidisperse
+                if (ci < tN/2) {
+                    lenscale = lenscale * 0.9;
+                }
+                else{
+                    lenscale = lenscale * 1.1;
+                }
+                
+                initializeVertexShapeParameters(ci,1.0,lenscale);
+            }
+            else{
+                lenscale = Rc;
+                initializeVertexShapeParameters(ci,aCalA0,lenscale);
+            }
+        }
+    */
 }
 
 
@@ -620,7 +665,7 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
         if (nv.at(ci)==1) {
             drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0);
         } else {
-            drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0) + r.at(ci);
+            drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0) + r.at(ci)*2;
         }
     }
     
@@ -1873,7 +1918,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
 
     // relax forces using FIRE
     while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax) {
-        //printTumorInterface(0);
+        printTumorInterface(0);
         // compute P
         P = 0.0;
         for (i = 0; i < vertDOF; i++)
@@ -2293,7 +2338,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     double subBoxLength = 2.0;
     double x_max=0;
     double Vy = 0.0;
-    double B = 3.0;
+    double B = 0.0;
     double H=0.0;
     double M_wall = M;
     double F_wall = 0.0;
