@@ -2365,7 +2365,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     double subBoxLength = 2.0;
     double x_max=0;
     double Vy = 0.0;
-    double B = 0.1;
+    double B = 0.0;
     double H=0.0;
     double M_wall = M;
     double F_wall = 0.0;
