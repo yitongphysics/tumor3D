@@ -10,8 +10,8 @@
 using namespace std;
 
 const double gamtt = 0.0;                 // surface tension
-const double boxLengthScale = 2;        // neighbor list box size in units of initial l0
-const double dt0 = 0.03;                // initial magnitude of time step in units of MD time
+const double boxLengthScale = 1.0;        // neighbor list box size in units of initial l0
+const double dt0 = 0.1;                // initial magnitude of time step in units of MD time
 const double Ftol = 1e-7;
 
 int main(int argc, char const *argv[])
@@ -22,7 +22,7 @@ int main(int argc, char const *argv[])
 
     // local variables to be read in
     int NT, NPRINTSKIP, seed;
-    double NTdbl, NPRINTSKIPdbl, l1, l2, v0, Dr0, aCalA0, kecm, ecmbreak, dDr, dPsi, Drmin, kv, ka, kb, kc, M, P0, g0;
+    double NTdbl, NPRINTSKIPdbl, l1, l2, v0, Dr0, aCalA0, kecm, ecmbreak, dDr, dPsi, Drmin, kv, ka, kb, kc, M, P0, volumeRatio;
 
     
     // read in parameters from command line input
@@ -42,7 +42,7 @@ int main(int argc, char const *argv[])
     string kb_str           = argv[14];             // kb
     string M_str            = argv[15];
     string P0_str           = argv[16];
-    string g0_str           = argv[17];                //
+    string volumeRatio_str  = argv[17];
     string seed_str         = argv[18];                // seed for rng
     string positionFile     = argv[19];                // output file string
     /*
@@ -67,6 +67,7 @@ int main(int argc, char const *argv[])
     string seed_str         = "17";                // seed for rng
     string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/P.pos";                // output file string
      */
+
     // using sstreams to get parameters
     stringstream NTss(NT_str);
     stringstream NPRINTSKIPss(NPRINTSKIP_str);
@@ -83,7 +84,7 @@ int main(int argc, char const *argv[])
     stringstream kbss(kb_str);
     stringstream P0ss(P0_str);
     stringstream Mss(M_str);
-    stringstream g0ss(g0_str);
+    stringstream volumeRatioss(volumeRatio_str);
     stringstream seedss(seed_str);
 
     // read into data
@@ -102,7 +103,7 @@ int main(int argc, char const *argv[])
     kbss            >> kb;
     Mss             >> M;
     P0ss            >> P0;
-    g0ss            >> g0;
+    volumeRatioss     >> volumeRatio;
     seedss             >> seed;
 
     // cast step dbls to ints
@@ -136,7 +137,7 @@ int main(int argc, char const *argv[])
     // time step in MD time units
     tumor3Dobj.setdt(dt0);
 
-    //read in standard polyhedron 42 vertices
+    //read in standard polyhedron 42 vertices and adjust based on aCalA0
     tumor3Dobj.readPolyhedron();
     tumor3Dobj.initializePolyhedron(aCalA0);
     
@@ -151,7 +152,7 @@ int main(int argc, char const *argv[])
     dPsi = 0.01;
     Drmin = 0.01;
 
-    tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,g0,dDr,dPsi,Drmin,NT,NPRINTSKIP);
+    tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,0,dDr,dPsi,Drmin,NT,NPRINTSKIP);
 
     // say goodbye
     cout << "\n** Finished interfaceInvasion.cpp, ending. " << endl;
@@ -159,3 +160,5 @@ int main(int argc, char const *argv[])
     return 0;
 }
  
+
+

@@ -98,7 +98,7 @@ int main(int argc, char const *argv[])
     
 	// determine number of tumor cells based on volumeRatio and prt
 	//tN = round(aN * volumeRatio * (prt/(1.0 - prt)));
-    tN = 1000;
+    tN = 1500;
 	NCELLS = tN + aN;
 
     cout.precision(10);
