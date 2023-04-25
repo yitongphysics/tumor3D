@@ -73,7 +73,7 @@ public:
     void stickyTumorInterfaceForceUpdate();
 
     // integrators
-    void tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0);
+    void tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div);
 
     // protocols
     void setupCheck();

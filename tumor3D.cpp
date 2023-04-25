@@ -233,8 +233,8 @@ void tumor3D::readPolyhedron(){
     
     xyz_unit.resize(3 * SNUM, 0.0);
     
-    std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
-    //std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
+    //std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
+    std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
     if(pfile1.good())
     {
         pfile1 >> D0_inter_unit;
@@ -248,8 +248,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile1.close();
 
-    std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
-    //std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
+    //std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
+    std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
     if(pfile2.good())
     {
         for (int i = 0; i < FNUM; i++)
@@ -263,8 +263,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile2.close();
 
-    std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
-    //std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
+    //std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
+    std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
     if(pfile3.good())
     {
         for (int i = 0; i < ENUM; i++)
@@ -278,8 +278,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile3.close();
 
-    std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
-    //std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
+    //std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
+    std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
     if(pfile4.good())
     {
         for (int i = 0; i < NN_NUM; i++)
@@ -293,8 +293,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile4.close();
 
-    std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
-    //std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
+    //std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
+    std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
     if(pfile5.good())
     {
         for(int i = 0; i < 3 * SNUM; i++)
@@ -463,13 +463,9 @@ void tumor3D::initializePolyhedron(double aCalA0){
     A_sum = 11.6659313917183045106185090844519;
     
     //V0=1
-    Rc = pow((  pow(A_sum, 1.5)/sqrt(PI)/6.0/calA  ), 1.0 / 3.0);
-    for (fi=0; fi<FNUM; fi++){
-        A0[fi] = A0_unit[fi] * Rc * Rc;
-    }
-    
+    Rc = pow((  pow(A_sum, 1.5)/sqrt(PI)/6.0/calA  ), -1.0 / 3.0);
     //adjust A0 based on aCalA0
-    Rc = pow(aCalA0/calA,1.0/3.0);
+    Rc *= pow(aCalA0/calA,1.0/3.0);
     for (fi=0; fi<FNUM; fi++){
         A0[fi] = A0_unit[fi] * Rc * Rc;
     }
@@ -478,6 +474,7 @@ void tumor3D::initializePolyhedron(double aCalA0){
         cout << "Preferred volume is not 1.0. Exit.";
         exit(-1);
     }
+    
 }
 void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aNV, int tNV){
     // local variables
@@ -610,7 +607,7 @@ void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aN
 void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double prt, double aspectRatio){
     // local variables
     int i, d, ci, cj, vi, gi, cellDOF = NDIM * NCELLS;
-    double volumeSum, xtra = 2.0, xi, Ldiv;
+    double volumeSum, xtra = 2.0, xi, Ldiv, Ltmp;
     double aspect_ratio = aspectRatio;
     // local disk vectors
     vector<double> drad(NCELLS, 0.0);
@@ -665,7 +662,7 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
         if (nv.at(ci)==1) {
             drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0);
         } else {
-            drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0) + r.at(ci)*2;
+            drad.at(ci) = pow(V0.at(ci)/PI*3.0/4.0,1.0/3.0) + r.at(ci);
         }
     }
     
@@ -824,16 +821,16 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
             if (ci < tN) {
                 if (xi < drad[ci])
                     dF[NDIM*ci] += (1.0 - (xi/drad[ci]))/drad[ci];
-                //warning if (xi > Ldiv- drad[ci])
-                else if (xi > L[0] - drad[ci])
-                    //dF[NDIM*ci] -= (1.0 - ((Ldiv - xi)/drad[ci]))/drad[ci];
-                    dF[NDIM*ci] -= (1.0 - ((L[0] - xi)/drad[ci]))/drad[ci];
+                //warning if (xi > L[0]- drad[ci])
+                else if (xi > Ldiv - drad[ci])
+                    dF[NDIM*ci] -= (1.0 - ((Ldiv - xi)/drad[ci]))/drad[ci];
+                    //dF[NDIM*ci] -= (1.0 - ((L[0] - xi)/drad[ci]))/drad[ci];
             }
             else {
-                //warning:if (xi < Ldiv + drad[ci])
-                if (xi < drad[ci])
-                    //dF[NDIM*ci] += (1.0 - ((xi - Ldiv)/drad[ci]))/drad[ci];
-                    dF[NDIM*ci] += (1.0 - (xi/drad[ci]))/drad[ci];
+                //warning:if (xi < drad[ci])
+                if (xi < Ldiv + drad[ci])
+                    dF[NDIM*ci] += (1.0 - ((xi - Ldiv)/drad[ci]))/drad[ci];
+                    //dF[NDIM*ci] += (1.0 - (xi/drad[ci]))/drad[ci];
                 else if (xi > L[0] - drad[ci])
                     dF[NDIM*ci] -= (1.0 - ((L[0] - xi)/drad[ci]))/drad[ci];
             }
@@ -841,7 +838,7 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
 
         // FIRE step 5. Final VV update
         for (i = 0; i < cellDOF; i++)
-            dF[i] -= 0.00001*dpos[i]*dpos[i];
+            dF[i] -= 0.000001*dpos[i]*dpos[i];
         
         // FIRE step 5. Final VV update
         for (i = 0; i < cellDOF; i++)
@@ -853,11 +850,13 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
             fcheck += dF[i] * dF[i];
         fcheck = sqrt(fcheck / NCELLS);
 
-        L[0] = L[0] < ((*max_element(dpos.begin(),dpos.end())) + (*max_element(drad.begin(),drad.end()))) ? L[0] : ((*max_element(dpos.begin(),dpos.end())) + (*max_element(drad.begin(),drad.end())));
+        //shrink box
+        Ltmp =  ((*max_element(dpos.begin(),dpos.end())) + (*max_element(drad.begin(),drad.end())));
+        L[0] = L[0] < Ltmp ? L[0] : Ltmp;
         L[1] = L[0];
         L[2] = L[0];
         
-        if (volumeSum/L[0]/L[1]/L[2] > 0.3) {
+        if (volumeSum/L[0]/L[1]/L[2] > 0.2) {
             break;
         }
         // print to console
@@ -902,7 +901,7 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
                 }
             }
             
-            printTumorInterface(0.0);
+            //printTumorInterface(0.0);
         }
 
         // update iterate
@@ -1882,7 +1881,7 @@ void tumor3D::stickyTumorInterfaceForceUpdate() {
 *******************************/
 
 
-void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
+void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div) {
     // local variables
     int i;
     // check to see if cell linked-list has been initialized
@@ -1894,6 +1893,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
     // FIRE variables
     double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
     int npPos, npNeg, fireit;
+    double x_max, x_min, Ldiv, xi;
     //double V_wall = 0.0, F_wall = 0.0;
     //double P0=0.001;
     // set dt based on geometric parameters
@@ -1916,9 +1916,20 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
     resetForcesAndEnergy();
     fill(v.begin(), v.end(), 0.0);
 
+    //Ldiv
+    x_max = 0.0;
+    for (i = 0; i < tN; i++){
+        x_max = x_max > x[NDIM*i] ? x_max : x[NDIM*i];
+    }
+    x_min = L[0];
+    for (i = tN; i < NCELLS; i++){
+        x_min = x_min < x[NDIM*i] ? x_min : x[NDIM*i];
+    }
+    Ldiv = (x_max * r[tN] + x_min* r[1])/(r[1] + r[tN]);
+    
     // relax forces using FIRE
     while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax) {
-        printTumorInterface(0);
+        //printTumorInterface(0);
         // compute P
         P = 0.0;
         for (i = 0; i < vertDOF; i++)
@@ -2060,6 +2071,21 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0) {
         // sort particles
         initializeNeighborLinkedList3D(2.0);
         CALL_MEMBER_FN(*this, forceCall)();
+        
+        //Ldiv
+        if(div){
+            for (i = 0; i < NVTOT; i++){
+                xi = x[NDIM*i];
+                if (i < tN) {
+                    if (xi > Ldiv - r[i])
+                        F[NDIM*i] -= kc*(1.0 - ((Ldiv - xi)/r[i]))/r[i];
+                }
+                else {
+                    if (xi < Ldiv + r[i])
+                        F[NDIM*i] += kc*(1.0 - ((xi - Ldiv)/r[i]))/r[i];
+                }
+            }
+        }
         //F_wall = (P0 - wpress[0]) * L[1] * L[2];
         // VV VELOCITY UPDATE #2
         for (i = 0; i < vertDOF; i++){
@@ -2165,7 +2191,7 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
     int ci, vi, s_idx;
     double fx, fy, fz, ftmp, cx, cy, cz, dx, dy ,dz, dr_min, dr_max, r_min, r_max, R;
     vector<int> tN_list;
-    
+    int div=1;
     // check correct setup
     setupCheck();
 
@@ -2269,6 +2295,7 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
             scaleParticleSizes3D(pow((phi0 + dphi0) / phi0,-1.0/3.0));
         }
         else if(phi0<0.25){
+            div = 0;
             L[0] *= 0.99;
             L[1] *= 0.99;
             L[2] *= 0.99;
@@ -2286,7 +2313,7 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
            // scaleFactor = pow((phi0 + dphi0) / phi0,-1.0/3.0);
             //scaleParticleSizes3D(scaleFactor);
         //}
-        tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, Ftol, dt0);
+        tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, Ftol, dt0, div);
 
         // update pressure
         //pcheck = 0.5 * (stress[0] + stress[1]);
@@ -2338,7 +2365,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     double subBoxLength = 2.0;
     double x_max=0;
     double Vy = 0.0;
-    double B = 0.0;
+    double B = 0.1;
     double H=0.0;
     double M_wall = M;
     double F_wall = 0.0;
