@@ -233,8 +233,8 @@ void tumor3D::readPolyhedron(){
     
     xyz_unit.resize(3 * SNUM, 0.0);
     
-    //std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
-    std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
+    std::ifstream pfile1("/Users/yitongzheng/Documents/Corey/tumor3D/src/DVA.txt");
+    //std::ifstream pfile1("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/DVA.txt");
     if(pfile1.good())
     {
         pfile1 >> D0_inter_unit;
@@ -248,8 +248,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile1.close();
 
-    //std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
-    std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
+    std::ifstream pfile2("/Users/yitongzheng/Documents/Corey/tumor3D/src/F_unit.txt");
+    //std::ifstream pfile2("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/F_unit.txt");
     if(pfile2.good())
     {
         for (int i = 0; i < FNUM; i++)
@@ -263,8 +263,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile2.close();
 
-    //std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
-    std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
+    std::ifstream pfile3("/Users/yitongzheng/Documents/Corey/tumor3D/src/EdgeList.txt");
+    //std::ifstream pfile3("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/EdgeList.txt");
     if(pfile3.good())
     {
         for (int i = 0; i < ENUM; i++)
@@ -278,8 +278,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile3.close();
 
-    //std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
-    std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
+    std::ifstream pfile4("/Users/yitongzheng/Documents/Corey/tumor3D/src/NonNeighborList.txt");
+    //std::ifstream pfile4("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/NonNeighborList.txt");
     if(pfile4.good())
     {
         for (int i = 0; i < NN_NUM; i++)
@@ -293,8 +293,8 @@ void tumor3D::readPolyhedron(){
     }
     pfile4.close();
 
-    //std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
-    std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
+    std::ifstream pfile5("/Users/yitongzheng/Documents/Corey/tumor3D/src/XYZ_unit.txt");
+    //std::ifstream pfile5("/gpfs/gibbs/project/ohern/yz974/tumor3D/src/XYZ_unit.txt");
     if(pfile5.good())
     {
         for(int i = 0; i < 3 * SNUM; i++)
