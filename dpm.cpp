@@ -43,11 +43,6 @@ dpm::dpm(int ndim) {
 		pbc[d] = 1;
 	}
 
-	// macroscopic stress vector
-	stress.resize(NDIM * (NDIM + 1) / 2);
-	for (i = 0; i < NDIM * (NDIM + 1) / 2; i++)
-		stress.at(i) = 0.0;
-
 	// initialize nearest neighbor info
 	NBX = -1;
 }
@@ -95,16 +90,6 @@ dpm::dpm(int n, int ndim, int seed) {
 	// preferred area for each face
 	A0.resize(FNUM);
 
-	// macroscopic stress vector
-	stress.resize(NDIM * (NDIM + 1) / 2);
-	for (i = 0; i < NDIM * (NDIM + 1) / 2; i++)
-		stress.at(i) = 0.0;
-
-	// contact network vector
-	cij.resize(NCELLS * (NCELLS - 1) / 2);
-	for (i = 0; i < NCELLS * (NCELLS - 1) / 2; i++)
-		cij.at(i) = 0;
-
 	// initialize nearest neighbor info
 	NBX = -1;
 
@@ -123,7 +108,6 @@ dpm::~dpm() {
 	x.clear();
 	v.clear();
 	F.clear();
-	stress.clear();
 	sb.clear();
 	lb.clear();
 	for (int i = 0; i < NBX; i++)
@@ -132,6 +116,7 @@ dpm::~dpm() {
 	head.clear();
 	last.clear();
 	list.clear();
+    C_list.clear();
 
 	if (posout.is_open())
 		posout.close();
@@ -499,6 +484,7 @@ void dpm::initializeNeighborLinkedList3D(double boxLengthScale) {
 	// local variables
 	double llscale;
 	int i, d, scx, scy, scz, boxid;
+    int ci, gi, vi;
     
 	// print to console
 	//cout << "** initializing neighbor linked list, boxLengthScale = " << boxLengthScale;
@@ -581,6 +567,7 @@ void dpm::initializeNeighborLinkedList3D(double boxLengthScale) {
 	head.resize(NBX);
 	last.resize(NBX);
 	list.resize(NVTOT + 1);
+    C_list.resize(NVTOT);
 
 	// print box info to console
 	//cout << ";  initially NBX = " << NBX << " ..." << endl;
@@ -588,8 +575,9 @@ void dpm::initializeNeighborLinkedList3D(double boxLengthScale) {
     fill(list.begin(), list.end(), 0);
     fill(head.begin(), head.end(), 0);
     fill(last.begin(), last.end(), 0);
+    fill(C_list.begin(), C_list.end(), 0);
     
-    for (int gi = 0; gi < NVTOT; gi++) {
+    for (gi = 0; gi < NVTOT; gi++) {
         int ix = int(x[NDIM * gi] / L[0] * scx);
         int iy = int(x[NDIM * gi+1] / L[1] * scy);
         int iz = int(x[NDIM * gi+2] / L[2] * scz);
@@ -611,6 +599,10 @@ void dpm::initializeNeighborLinkedList3D(double boxLengthScale) {
             list[last[boxid]] = gi + 1;
             last[boxid] = gi + 1;
         }
+        
+        //initialize C_list
+        cindices(ci,vi, gi);
+        C_list[gi] = ci;
     }
     /*
     NBX=1;

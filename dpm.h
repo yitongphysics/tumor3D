@@ -83,6 +83,7 @@ protected:
 	std::vector<int> nv;
     std::vector<double> V0;
 	std::vector<int> szList;
+    std::vector<int> C_list;
     
     std::vector<std::vector<int>>        edgelist;
     std::vector<std::vector<int>>        f_unit;
@@ -95,12 +96,6 @@ protected:
 	std::vector<double> x;
 	std::vector<double> v;
 	std::vector<double> F;
-
-	// macroscopic stress vector
-	std::vector<double> stress;
-
-	// contact network
-	std::vector<int> cij;
 
 	// Box linked-list variables
 	int NBX;

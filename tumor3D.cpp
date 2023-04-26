@@ -442,7 +442,6 @@ void tumor3D::reCellList3D(double boxLengthScale) {
                     // Skip the cases that lead to double counting
                     if (dz == 0 && dy == 0 && dx <= 0) continue;
                     if (dz == 0 && dy == -1) continue;
-                    if (dz == 0 && dy == 0 && dx == -1) continue;
                     
                     int nx = ix + dx;
                     int ny = iy + dy;
@@ -509,6 +508,23 @@ void tumor3D::reNeighborList3D() {
         }
     }
     
+    /*
+    NBX=1;
+    fill(list.begin(), list.end(), 0);
+    fill(head.begin(), head.end(), 0);
+    fill(last.begin(), last.end(), 0);
+    for (int gi = 0; gi < NVTOT; gi++) {
+        if (head[0] == 0) {
+            head[0] = gi + 1;
+            last[0] = gi + 1;
+        }
+        else {
+            list[last[0]] = gi + 1;
+            last[0] = gi + 1;
+        }
+    }
+    */
+    
 }
 
 void tumor3D::initializePolyhedron(double aCalA0){
@@ -530,10 +546,10 @@ void tumor3D::initializePolyhedron(double aCalA0){
         A0[fi] = A0_unit[fi] * Rc * Rc;
     }
     
-    if (V0[tN+1] != 1.0) {
-        cout << "Preferred volume is not 1.0. Exit.";
-        exit(-1);
-    }
+    //if (V0[tN+1] != 1.0) {
+      //  cout << "Preferred volume is not 1.0. Exit.";
+        //exit(-1);
+    //}
     
 }
 void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aNV, int tNV){
@@ -1381,7 +1397,7 @@ void tumor3D::tumorShapeForces(){
 
 void tumor3D::repulsiveTumorInterfaceForces() {
     // local variables
-    int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj;
+    int ci, cj, gi, gj, bi, bj, pi, pj;
     double sij, rij, xij, dx, dy, dz, xi, ri;
     double ftmp, fx, fy, fz;
     double invRij;
@@ -1402,16 +1418,21 @@ void tumor3D::repulsiveTumorInterfaceForces() {
             ri = r[gi];
             if (xi - wpos < ri){
                 // update forces
-                fx = kc*(1.0 - ((xi-wpos)/ri))/ri;
+                xij = (xi-wpos)/ri;
+                fx = kc*(1.0 - xij)/ri;
                 F[NDIM*gi] += fx;
-
+                
+                U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
                 // update wall stress
                 wpress[0] += fx;
             }
             else if (xi > L[0] - ri){
                 // update forces
-                fx = -kc*(1.0 - ((L[0] - xi)/ri))/ri;
+                xij = (L[0] - xi)/ri;
+                fx = -kc*(1.0 - xij)/ri;
                 F[NDIM*gi] += fx;
+                
+                U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
             }
 
             // cell index of gi
@@ -1456,7 +1477,7 @@ void tumor3D::repulsiveTumorInterfaceForces() {
                                 ftmp = kc*(1 - xij)/sij;
                                 
                                 // increase potential energy
-                                U += 0.5*kc*pow(1.0 - xij,2.0);
+                                U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
                                 
                                 // force elements
                                 invRij = 1.0 / rij;
@@ -1527,7 +1548,7 @@ void tumor3D::repulsiveTumorInterfaceForces() {
                                     ftmp = kc*(1 - xij)/sij;
                                     
                                     // increase potential energy
-                                    U += 0.5*kc*pow(1.0 - xij,2.0);
+                                    U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
                                     
                                     // force elements
                                     invRij = 1.0 / rij;
@@ -1564,14 +1585,12 @@ void tumor3D::repulsiveTumorInterfaceForces() {
 
 void tumor3D::stickyTumorInterfaceForces(){
     // local variables
-    int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj;
+    int ci, cj, gi, gj, bi, bj, pi, pj;
     double sij, rij, dx, dy, dz, xi, ri;
     double ftmp, fx, fy, fz;
     double invRij;
     double L1_inv = 1.0 / L[1];
     double L2_inv = 1.0 / L[2];
-    //miu is friction constand in the 1st method or preferred velocity in the 2nd method
-    vector<int> ztt(NVTOT,0);
 
     // attraction shell parameters
     double shellij, cutij, xij, kint = (kc*l1)/(l2 - l1);
@@ -1594,7 +1613,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                 fx = kc*(1.0 - xij)/ri;
                 F[NDIM*gi] += fx;
                 
-                U += 0.5*kc*pow(1.0 - xij,2.0);
+                U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
                 // update wall stress
                 wpress[0] += fx;
             }
@@ -1604,17 +1623,13 @@ void tumor3D::stickyTumorInterfaceForces(){
                 fx = -kc*(1.0 - xij)/ri;
                 F[NDIM*gi] += fx;
                 
-                U += 0.5*kc*pow(1.0 - xij,2.0);
-
-                // update wall stresses
-                //wpress[0] -= fx;
+                U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
             }
             
             // cell index of gi
             ci=C_list[gi];
             // next particle in list
             pj = list[pi];
-
             // loop down neighbors of pi in same cell
             while (pj > 0) {
                 // real index of pj
@@ -1635,7 +1650,7 @@ void tumor3D::stickyTumorInterfaceForces(){
                 // attraction distances
                 shellij = (1.0 + l2)*sij;
                 cutij = (1.0 + l1)*sij;
-
+                
                 // particle distance
                 dx = x[NDIM * gj] - x[NDIM * gi];
                 if (abs(dx) < shellij) {
@@ -1650,7 +1665,6 @@ void tumor3D::stickyTumorInterfaceForces(){
                                 rij = sqrt(rij);
                                 // scaled distance
                                 xij = rij/sij;
-                                
                                 // pick force based on vertex-vertex distance
                                 // only tumor cells attract
                                 if (rij > cutij && ci < tN && cj < tN){
@@ -1658,8 +1672,8 @@ void tumor3D::stickyTumorInterfaceForces(){
                                     ftmp = kint*(xij - 1.0 - l2)/sij;
                                     
                                     // increase potential energy
-                                    U += -0.5*kint*pow(1.0 + l2 - xij,2.0);
-                                    //Utest+=-0.5*kint*pow(1.0 + l2 - xij,2.0);
+                                    U += -0.5*kint*(1.0 + l2 - xij) * (1.0  + l2 - xij);
+                                    //Utest+=-0.5*kint*(1.0 + l2 - xij) * (1.0  + l2 - xij);
                                 }
                                 else{
                                     if ((ci < tN && cj < tN) || rij < sij){
@@ -1668,11 +1682,11 @@ void tumor3D::stickyTumorInterfaceForces(){
                                         
                                         // increase potential energy
                                         if(ci < tN && cj < tN){
-                                            U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
-                                            //Utest += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
+                                            U += 0.5*kc*((1.0 - xij) * (1.0 - xij) - l1*l2);
+                                            //Utest += 0.5*kc*((1.0 - xij) * (1.0 - xij) - l1*l2);
                                         }
                                         else{
-                                            U += 0.5*kc*pow(1.0 - xij,2.0);
+                                            U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
                                         }
                                     }
                                     else{
@@ -1694,7 +1708,6 @@ void tumor3D::stickyTumorInterfaceForces(){
                                 F[NDIM*gj]             += fx;
                                 F[NDIM*gj + 1]         += fy;
                                 F[NDIM*gj + 2]         += fz;
-                                
                             }
                         }
                     }
@@ -1756,8 +1769,8 @@ void tumor3D::stickyTumorInterfaceForces(){
                                         ftmp = kint*(xij - 1.0 - l2)/sij;
                                         
                                         // increase potential energy
-                                        U += -0.5*kint*pow(1.0 + l2 - xij,2.0);
-                                        //Utest+=-0.5*kint*pow(1.0 + l2 - xij,2.0);
+                                        U += -0.5*kint*(1.0 + l2 - xij) * (1.0  + l2 - xij);
+                                        //Utest+=-0.5*kint*(1.0 + l2 - xij) * (1.0  + l2 - xij);
                                     }
                                     else{
                                         if ((ci < tN && cj < tN) || rij < sij){
@@ -1766,11 +1779,11 @@ void tumor3D::stickyTumorInterfaceForces(){
                                             
                                             // increase potential energy
                                             if(ci < tN && cj < tN){
-                                                U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
-                                                //Utest += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
+                                                U += 0.5*kc*((1.0 - xij) * (1.0 - xij) - l1*l2);
+                                                //Utest += 0.5*kc*((1.0 - xij) * (1.0 - xij) - l1*l2);
                                             }
                                             else{
-                                                U += 0.5*kc*pow(1.0 - xij,2.0);
+                                                U += 0.5*kc*(1.0 - xij) * (1.0 - xij);
                                             }
                                         }
                                         else{
@@ -2319,7 +2332,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     double subBoxLength = 2.5;
     double x_max=0;
     double Vy = 0.0;
-    double B = 0.0;
+    double B = 0.1;
     double H=0.0;
     double M_wall = M;
 
@@ -2383,7 +2396,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         
         /*******************************************************************************************************************************/
         // update positions (Velocity Verlet, OVERDAMPED) & update velocity 1st term
-        for (i=0; i<tN*NDIM; i++){
+        for (i=0; i<vertDOF; i++){
             r1[i] = distribution(gen);
             r2[i] = distribution(gen);
             
@@ -2392,8 +2405,8 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         }
         r1.back() = distribution(gen);
         r2.back() = distribution(gen);
-        //V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
-        //wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
+        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
+        wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
         
         // update psi before update force
         //psiDiffusion();
@@ -2407,9 +2420,9 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         F_wall = (P0 - wpress[0]) * L[1] * L[2];
         
         // update velocity 2nd term (Velocity Verlet, OVERDAMPED)
-        for (i=0; i<tN*NDIM; i++)
+        for (i=0; i<vertDOF; i++)
             v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i] - B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
-        //V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
+        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
 
         // update time
         t += dt;
@@ -2495,7 +2508,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
 
 void tumor3D::printTumorInterface(double t){
     // local variables
-    int ci, cj, vi, gi, ctmp;
+    int ci, vi, gi;
     double xi, yi, zi, dx, dy, dz, Lx, Ly, Lz, cx, cy ,cz;
 
     // check if pos object is open

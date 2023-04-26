@@ -54,7 +54,8 @@ public:
     void settau(double val) { tau = val; };
     void setkecm(double val) { kecm = val; };
     void setecmbreak(double val) { ecmbreak = val; };
-    void reNeighborLinkedList3D(double boxLengthScale);
+    void reCellList3D(double boxLengthScale);
+    void reNeighborList3D();
 
     // initialization
     void initializeTumorInterface(double aCalA0, double volumeRatio, int aNV, int tNV);
