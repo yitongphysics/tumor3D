@@ -2316,10 +2316,10 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     // local variables
     int k, i, ci, gi, upb = 20000;
     double t = 0.0;
-    double subBoxLength = 2.0;
+    double subBoxLength = 2.5;
     double x_max=0;
     double Vy = 0.0;
-    double B = 0.1;
+    double B = 0.0;
     double H=0.0;
     double M_wall = M;
 
@@ -2383,7 +2383,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         
         /*******************************************************************************************************************************/
         // update positions (Velocity Verlet, OVERDAMPED) & update velocity 1st term
-        for (i=0; i<NVTOT*NDIM; i++){
+        for (i=0; i<tN*NDIM; i++){
             r1[i] = distribution(gen);
             r2[i] = distribution(gen);
             
@@ -2392,8 +2392,8 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         }
         r1.back() = distribution(gen);
         r2.back() = distribution(gen);
-        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
-        wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
+        //V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
+        //wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
         
         // update psi before update force
         //psiDiffusion();
@@ -2407,9 +2407,9 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         F_wall = (P0 - wpress[0]) * L[1] * L[2];
         
         // update velocity 2nd term (Velocity Verlet, OVERDAMPED)
-        for (i=0; i<NVTOT*NDIM; i++)
+        for (i=0; i<tN*NDIM; i++)
             v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i] - B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
-        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
+        //V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
 
         // update time
         t += dt;
