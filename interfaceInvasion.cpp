@@ -22,7 +22,7 @@ int main(int argc, char const *argv[])
 
     // local variables to be read in
     int NT, NPRINTSKIP, seed;
-    double NTdbl, NPRINTSKIPdbl, l1, l2, v0, Dr0, aCalA0, kecm, ecmbreak, dDr, dPsi, Drmin, kv, ka, kb, kc, M, P0, volumeRatio;
+    double NTdbl, NPRINTSKIPdbl, l1, l2, v0, f0, Dr0, aCalA0, kecm, ecmbreak, kv, ka, kb, kc, M, P0, volumeRatio;
 
     /*
     // read in parameters from command line input
@@ -32,20 +32,21 @@ int main(int argc, char const *argv[])
     string l1_str             = argv[4];                // attraction strength (must be < l2)
     string l2_str             = argv[5];                // attraction range (must be > l1)
     string v0_str             = argv[6];                // tumor cell crawling speed
-    string Dr0_str             = argv[7];                // initial angular diffusion
-    string aCalA0_str             = argv[8];                // spread of velocity around cell perimeter
-    string kecm_str         = argv[9];                // ecm adhesion strength
-    string ecmbreak_str     = argv[10];                // ecm adhesion range
-    string kv_str           = argv[11];             // ka
-    string ka_str           = argv[12];             // kl
-    string kc_str           = argv[13];             // kc
-    string kb_str           = argv[14];             // kb
-    string M_str            = argv[15];
-    string P0_str           = argv[16];
-    string volumeRatio_str  = argv[17];
-    string seed_str         = argv[18];                // seed for rng
-    string positionFile     = argv[19];                // output file string
-     */
+    string Dr0_str             = argv[7];
+    string Dr0_str             = argv[8];                // initial angular diffusion
+    string aCalA0_str             = argv[9];                // spread of velocity around cell perimeter
+    string kecm_str         = argv[10];                // ecm adhesion strength
+    string ecmbreak_str     = argv[11];                // ecm adhesion range
+    string kv_str           = argv[12];             // ka
+    string ka_str           = argv[13];             // kl
+    string kc_str           = argv[14];             // kc
+    string kb_str           = argv[15];             // kb
+    string M_str            = argv[16];
+    string P0_str           = argv[17];
+    string volumeRatio_str  = argv[18];
+    string seed_str         = argv[19];                // seed for rng
+    string positionFile     = argv[20];                // output file string
+    */
     
     // read in parameters from command line input
     string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/22div.test";                // input file with initial configuration
@@ -53,7 +54,8 @@ int main(int argc, char const *argv[])
     string NPRINTSKIP_str   = "100";                // # of steps between prints
     string l1_str           = "0.1";                // attraction strength (must be < l2)
     string l2_str           = "0.2";                // attraction range (must be > l1)
-    string v0_str           = "0.00001";                // tumor cell crawling speed
+    string v0_str           = "0.0001";                // tumor cell crawling speed
+    string f0_str           = "0.01";
     string Dr0_str          = "0.01";                // initial angular diffusion
     string aCalA0_str       = "1.1";                // calA0 of adipocyte
     string kecm_str         = "0.0";                // ecm adhesion strength
@@ -67,7 +69,7 @@ int main(int argc, char const *argv[])
     string volumeRatio_str  = "45";                //
     string seed_str         = "17";                // seed for rng
     string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/P.pos";                // output file string
-     
+    
 
     // using sstreams to get parameters
     stringstream NTss(NT_str);
@@ -76,6 +78,7 @@ int main(int argc, char const *argv[])
     stringstream l2ss(l2_str);
     stringstream v0ss(v0_str);
     stringstream Dr0ss(Dr0_str);
+    stringstream f0ss(f0_str);
     stringstream aCalA0ss(aCalA0_str);
     stringstream kecmss(kecm_str);
     stringstream ecmbreakss(ecmbreak_str);
@@ -94,18 +97,19 @@ int main(int argc, char const *argv[])
     l1ss             >> l1;
     l2ss             >> l2;
     v0ss             >> v0;
-    Dr0ss             >> Dr0;
-    aCalA0ss             >> aCalA0;
-    kecmss            >> kecm;
-    ecmbreakss         >> ecmbreak;
+    Dr0ss            >> Dr0;
+    f0ss             >> f0;
+    aCalA0ss         >> aCalA0;
+    kecmss           >> kecm;
+    ecmbreakss       >> ecmbreak;
     kvss             >> kv;
     kass             >> ka;
-    kcss            >> kc;
-    kbss            >> kb;
-    Mss             >> M;
-    P0ss            >> P0;
-    volumeRatioss     >> volumeRatio;
-    seedss             >> seed;
+    kcss             >> kc;
+    kbss             >> kb;
+    Mss              >> M;
+    P0ss             >> P0;
+    volumeRatioss    >> volumeRatio;
+    seedss           >> seed;
 
     // cast step dbls to ints
     NT = (int)NTdbl;
@@ -127,7 +131,7 @@ int main(int argc, char const *argv[])
     // activity parameters
     tumor3Dobj.setv0(v0);
     tumor3Dobj.setDr0(Dr0);
-    tumor3Dobj.setDs(0.1);
+    tumor3Dobj.setf0(f0);
     tumor3Dobj.setkecm(kecm);
     tumor3Dobj.setecmbreak(ecmbreak);
 
@@ -144,16 +148,12 @@ int main(int argc, char const *argv[])
     
     // initialize neighbor linked list
     tumor3Dobj.initializeNeighborLinkedList3D(boxLengthScale);
-
+    tumor3Dobj.initializePsi();
     // invasion
     cout.precision(10);
     cout << "Running invasion protocol..." << endl;
-    // tumor3Dobj.invasion(invasionForceUpdate,dDr,dPsi,Drmin,NT,NPRINTSKIP);
-    dDr = 0.01;
-    dPsi = 0.01;
-    Drmin = 0.01;
 
-    tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,0,dDr,dPsi,Drmin,NT,NPRINTSKIP);
+    tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,0,NT,NPRINTSKIP);
 
     // say goodbye
     cout << "\n** Finished interfaceInvasion.cpp, ending. " << endl;
