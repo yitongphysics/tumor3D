@@ -109,15 +109,11 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(3) {
     szList.resize(NCELLS);
 
     // initialize ecm + crawling variables
-    psi.resize(tN);
+    psi.resize(tN*NDIM);
     Dr.resize(tN);
-    F_ij.resize(tN * NCELLS * NDIM);
-    contactTime.resize(tN * (NCELLS - tN));
     
     fill(psi.begin(), psi.end(), 0.0);
     fill(Dr.begin(), Dr.end(), 0.0);
-    fill(F_ij.begin(),F_ij.end(),0.0);
-    fill(contactTime.begin(),contactTime.end(),0);
     
     pinpos.resize(NDIM * (NCELLS - tN));
     pinattach.resize(NCELLS - tN);
@@ -133,7 +129,7 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(3) {
         getline(inputobj, inputStr);
         if (ci < tN){
             sscanf(inputStr.c_str(),"CINFO %d %*d %*d %lf %*lf %lf %*f",&nvtmp,&V0tmp,&psitmp);
-            psi.at(ci) = psitmp;
+            //psi.at(ci) = psitmp;
         }
         else
             sscanf(inputStr.c_str(),"CINFO %d %*d %*d %lf %*lf %*lf %*lf %*lf %*lf",&nvtmp,&V0tmp);
@@ -567,16 +563,12 @@ void tumor3D::initializeTumorInterface(double aCalA0, double volumeRatio, int aN
     szList.resize(NCELLS);
 
     // initialize ecm + crawling variables
-    psi.resize(tN);
+    psi.resize(tN*NDIM);
     Dr.resize(tN);
-    F_ij.resize(tN * NCELLS * NDIM);
-    contactTime.resize(tN * (NCELLS - tN));
     
     fill(psi.begin(), psi.end(), 0.0);
     fill(Dr.begin(), Dr.end(), 0.0);
-    fill(F_ij.begin(),F_ij.end(),0.0);
-    fill(contactTime.begin(),contactTime.end(),0);
-    
+
     pinpos.resize(NDIM * (NCELLS - tN));
     pinattach.resize(NCELLS - tN);
     ifbroken.resize(NCELLS - tN);
@@ -1043,39 +1035,75 @@ void tumor3D::initializeTumorInterfacePositions(double phi0, double Ftol, double
 
 *******************************/
 
-
-// -- CRAWLING CELLS
+//initialize crawlling direction
+void tumor3D::initializePsi(){
+    int ci;
+    double r1, r2, r3;
+    double psi_R;
+    default_random_engine gen;
+    normal_distribution<double> distribution(0.0, 1.0);
+    
+    for (ci=0; ci<tN; ci++){
+        // generate random variable
+        r1 = distribution(gen);
+        r2 = distribution(gen);
+        r3 = distribution(gen);
+        
+        psi_R = sqrt(r1*r1+r2*r2+r3*r3);
+        
+        psi[NDIM*ci    ] = r1/psi_R;
+        psi[NDIM*ci + 1] = r2/psi_R;
+        psi[NDIM*ci + 2] = r3/psi_R;
+    }
+}
 
 // update psi based on Dr only
 void tumor3D::psiDiffusion(){
     // local variables
     int ci;
-    double r1, r2, grv;
-
+    double r1, r2, r3;
+    double psi_x, psi_y, psi_z;
+    double dpsi_x, dpsi_y, dpsi_z;
+    double R_inv;
+    default_random_engine gen;
+    normal_distribution<double> distribution(0.0, 1.0);
+    
+    double sg = sqrt(Dr0*2.0)*dt;
     // update director for each cell
     for (ci=0; ci<tN; ci++){
+        psi_x = psi[ci*NDIM];
+        psi_y = psi[ci*NDIM + 1];
+        psi_z = psi[ci*NDIM + 2];
+        
         // generate random variable
-        r1 = drand48();
-        r2 = drand48();
-        grv = sqrt(-2.0*log(r1))*cos(2.0*PI*r2);
+        r1 = distribution(gen);
+        r2 = distribution(gen);
+        r3 = distribution(gen);
 
+        dpsi_x = sg * (psi_y*r3 - psi_z*r2);
+        dpsi_y = sg * (psi_z*r1 - psi_x*r3);
+        dpsi_z = sg * (psi_x*r2 - psi_y*r1);
         // update director for cell ci
-        psi[ci] += sqrt(2.0*dt*Dr0)*grv;
+        psi_x += dpsi_x;
+        psi_y += dpsi_y;
+        psi_z += dpsi_z;
+        
+        R_inv = 1.0/sqrt(psi_x*psi_x+psi_y*psi_y+psi_z*psi_z);
+        
+        psi[ci*NDIM    ] = psi_x*R_inv;
+        psi[ci*NDIM + 1] = psi_y*R_inv;
+        psi[ci*NDIM + 2] = psi_z*R_inv;
     }
 }
 //tumor cells swim
 void tumor3D::crawlerUpdate(){
     // local variables
-    int gi, ci, vi;
+    int ci;
     // loop over all cells, vertices
-    gi = 0;
     for (ci=0; ci<tN; ci++){
-        // loop over vertices
-        for (vi=0; vi<nv[ci]; vi++){
-            F[NDIM*gi] += v0*cos(psi[ci]);
-            F[NDIM*gi + 1] += v0*sin(psi[ci]);
-            gi++;
-        }
+        F[NDIM*ci]     += f0*psi[NDIM*ci];
+        F[NDIM*ci + 1] += f0*psi[NDIM*ci + 1];
+        F[NDIM*ci + 1] += f0*psi[NDIM*ci + 2];
     }
 }
 
@@ -1833,7 +1861,7 @@ void tumor3D::repulsiveTumorInterfaceForceUpdate() {
 
 void tumor3D::stickyTumorInterfaceForceUpdate() {
     resetForcesAndEnergy();
-    //crawlerUpdate();
+    crawlerUpdate();
     stickyTumorInterfaceForces();
     tumorShapeForces();
 }
@@ -2312,13 +2340,10 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
     
     
     fill(v.begin(), v.end(), 0.0);
-    for (ci=0; ci<tN; ci++){
-        psi[ci] = 2.0*PI*drand48();
-    }
 }
 
 // invasion at constant pressure
-void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double g0, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
+void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double g0, int NT, int NPRINTSKIP){
     
     default_random_engine gen;
     normal_distribution<double> distribution(0.0, 1.0);
@@ -2368,8 +2393,6 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     V0.reserve(upb);
     Dr.reserve(upb);
     psi.reserve(upb);
-    F_ij.reserve(40000);
-    contactTime.reserve(40000);
     list.reserve(upb);
     szList.reserve(upb);
     pinattach.reserve(upb);
@@ -2409,7 +2432,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
         
         // update psi before update force
-        //psiDiffusion();
+        psiDiffusion();
         //psiECM();
         
         // sort particles
@@ -2566,7 +2589,7 @@ void tumor3D::printTumorInterface(double t){
         if (ci < tN){
             posout << setw(wnum) << left << V0.at(ci);
             posout << setw(wnum) << left << 0.33;
-            posout << setw(wnum) << left << psi.at(ci);
+            posout << setw(wnum) << left << 0.0;
             posout << setw(wnum) << left << Dr.at(ci);
             
         }
