@@ -1,5 +1,5 @@
 // header files
-
+/*
 #include "tumor3D.h"
 #include <sstream>
 
@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
     string l2_str             = argv[5];                // attraction range (must be > l1)
     string v0_str             = argv[6];                // tumor cell crawling speed
     string Dr0_str             = argv[7];
-    string Dr0_str             = argv[8];                // initial angular diffusion
+    string f0_str             = argv[8];                // initial angular diffusion
     string aCalA0_str             = argv[9];                // spread of velocity around cell perimeter
     string kecm_str         = argv[10];                // ecm adhesion strength
     string ecmbreak_str     = argv[11];                // ecm adhesion range
@@ -47,7 +47,7 @@ int main(int argc, char const *argv[])
     string seed_str         = argv[19];                // seed for rng
     string positionFile     = argv[20];                // output file string
     */
-    
+    /*
     // read in parameters from command line input
     string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/22div.test";                // input file with initial configuration
     string NT_str           = "3000";                // # of time steps
@@ -56,7 +56,7 @@ int main(int argc, char const *argv[])
     string l2_str           = "0.2";                // attraction range (must be > l1)
     string v0_str           = "0.0001";                // tumor cell crawling speed
     string f0_str           = "0.01";
-    string Dr0_str          = "0.01";                // initial angular diffusion
+    string Dr0_str          = "0.000001";                // initial angular diffusion
     string aCalA0_str       = "1.1";                // calA0 of adipocyte
     string kecm_str         = "0.0";                // ecm adhesion strength
     string ecmbreak_str     = "0.0";                // ecm adhesion range
@@ -163,3 +163,4 @@ int main(int argc, char const *argv[])
  
 
 
+*/

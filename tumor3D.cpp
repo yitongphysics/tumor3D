@@ -1058,14 +1058,15 @@ void tumor3D::initializePsi(){
 }
 
 // update psi based on Dr only
-void tumor3D::psiDiffusion(){
+void tumor3D::psiDiffusion(int seed){
     // local variables
     int ci;
     double r1, r2, r3;
     double psi_x, psi_y, psi_z;
     double dpsi_x, dpsi_y, dpsi_z;
     double R_inv;
-    default_random_engine gen;
+    
+    default_random_engine gen(seed);
     normal_distribution<double> distribution(0.0, 1.0);
     
     double sg = sqrt(Dr0*2.0)*dt;
@@ -1079,7 +1080,7 @@ void tumor3D::psiDiffusion(){
         r1 = distribution(gen);
         r2 = distribution(gen);
         r3 = distribution(gen);
-
+        
         dpsi_x = sg * (psi_y*r3 - psi_z*r2);
         dpsi_y = sg * (psi_z*r1 - psi_x*r3);
         dpsi_z = sg * (psi_x*r2 - psi_y*r1);
@@ -1855,6 +1856,7 @@ void tumor3D::stickyTumorInterfaceForces(){
 
 void tumor3D::repulsiveTumorInterfaceForceUpdate() {
     resetForcesAndEnergy();
+    crawlerUpdate();
     repulsiveTumorInterfaceForces();
     tumorShapeForces();
 }
@@ -1879,7 +1881,7 @@ void tumor3D::stickyTumorInterfaceForceUpdate() {
 *******************************/
 
 
-void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div) {
+double tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, double Ldiv0) {
     // local variables
     int i;
     // check to see if cell linked-list has been initialized
@@ -1891,8 +1893,9 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
     // FIRE variables
     double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
     int npPos, npNeg, fireit;
-    double x_max, x_min, Ldiv, xi;
-    //double V_wall = 0.0, F_wall = 0.0;
+    double x_max, x_min, xi;
+    double V_wall = 0.0, F_wall = 0.0;
+    double Ldiv = Ldiv0;
     //double P0=0.001;
     // set dt based on geometric parameters
     setdt(dt0);
@@ -1914,16 +1917,6 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
     resetForcesAndEnergy();
     fill(v.begin(), v.end(), 0.0);
 
-    //Ldiv
-    x_max = 0.0;
-    for (i = 0; i < tN; i++){
-        x_max = x_max > x[NDIM*i] ? x_max : x[NDIM*i];
-    }
-    x_min = L[0];
-    for (i = tN; i < NCELLS; i++){
-        x_min = x_min < x[NDIM*i] ? x_min : x[NDIM*i];
-    }
-    Ldiv = (x_max * r[tN] + x_min* r[1])/(r[1] + r[tN]);
     
     // relax forces using FIRE
     while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax) {
@@ -1932,7 +1925,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
         P = 0.0;
         for (i = 0; i < vertDOF; i++)
             P += v[i] * F[i];
-        //P += V_wall * F_wall;
+        P += V_wall * F_wall;
         // print to console
         
         if (fireit % NSKIP == 0) {
@@ -1946,7 +1939,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
             cout << "    ** fireit     = " << fireit << endl;
             cout << "    ** fcheck     = " << fcheck << endl;
             cout << "   ** Ftol     = " << Ftol << endl;
-            cout << "    ** wpos         = " << wpos << endl;
+            cout << "    ** Ldiv         = " << Ldiv << endl;
             cout << "    ** dt         = " << dt << endl;
             cout << "    ** P         = " << P << endl;
             cout << "    ** alpha     = " << alpha << endl;
@@ -2002,8 +1995,8 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
                 // reset vertex velocities
                 v[i] = 0.0;
             }
-            //wpos -=0.5 * dt * V_wall;
-            //V_wall = 0.0;
+            Ldiv -=0.5 * dt * V_wall;
+            V_wall = 0.0;
             
             
             // decrease time step if past initial delay
@@ -2023,7 +2016,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
         // VV VELOCITY UPDATE #1
         for (i = 0; i < vertDOF; i++)
             v[i] += 0.5 * dt * F[i];
-        //V_wall += 0.5 * dt * F_wall ;
+        V_wall += 0.5 * dt * F_wall ;
         
         
         
@@ -2037,8 +2030,8 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
             
             v[i] = (v[i] > 0.001) ? 0.001 : v[i];
         }
-        //fnorm += F_wall * F_wall;
-        //vnorm += V_wall * V_wall;
+        fnorm += F_wall * F_wall;
+        vnorm += V_wall * V_wall;
         
         fnorm = sqrt(fnorm);
         vnorm = sqrt(vnorm);
@@ -2049,7 +2042,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
         if (fnorm > 0) {
             for (i = 0; i < vertDOF; i++)
                 v[i] = (1 - alpha) * v[i] + alpha * (F[i] / fnorm) * vnorm;
-            //V_wall = (1 - alpha) * V_wall + alpha * (F_wall / fnorm) * vnorm;
+            V_wall = (1 - alpha) * V_wall + alpha * (F_wall / fnorm) * vnorm;
         }
 
         // VV POSITION UPDATE
@@ -2063,24 +2056,30 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
             else if (x[i] < 0.0 && pbc[i % NDIM])
                 x[i] += L[i % NDIM];
         }
-        //wpos += dt * V_wall;
+        Ldiv += dt * V_wall;
 
         // update forces (function passed as argument)
         // sort particles
-        initializeNeighborLinkedList3D(2.0);
+        reCellList3D(2.0);
+        reNeighborList3D();
         CALL_MEMBER_FN(*this, forceCall)();
-        
+        F_wall=0.0;
         //Ldiv
-        if(div){
+        if(Ldiv>0.0){
             for (i = 0; i < NVTOT; i++){
                 xi = x[NDIM*i];
                 if (i < tN) {
-                    if (xi > Ldiv - r[i])
+                    if (xi > Ldiv - r[i]){
                         F[NDIM*i] -= kc*(1.0 - ((Ldiv - xi)/r[i]))/r[i];
+                        F_wall += kc*(1.0 - ((Ldiv - xi)/r[i]))/r[i];
+                    }
+                        
                 }
                 else {
-                    if (xi < Ldiv + r[i])
+                    if (xi < Ldiv + r[i]){
                         F[NDIM*i] += kc*(1.0 - ((xi - Ldiv)/r[i]))/r[i];
+                        F_wall -= kc*(1.0 - ((xi - Ldiv)/r[i]))/r[i];
+                    }
                 }
             }
         }
@@ -2089,7 +2088,8 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
         for (i = 0; i < vertDOF; i++){
             v[i] += 0.5 * F[i] * dt;
         }
-        //V_wall += 0.5 * F_wall * dt;
+        V_wall += 0.5 * F_wall * dt;
+        
         // update fcheck based on fnorm (= force per degree of freedom)
         /*
         fcheck = 0.0;
@@ -2103,9 +2103,9 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
                 fcheck=abs(F[i]);
             }
         }
-        //if (fcheck<abs(F_wall) {
-            //fcheck=abs(F_wall);
-        //}
+        if (fcheck<abs(F_wall)) {
+            fcheck=abs(F_wall);
+        }
         
         // update iterator
         fireit++;
@@ -2137,6 +2137,7 @@ void tumor3D::tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div
         cout << endl << endl;
          */
     }
+    return Ldiv;
 }
 
 
@@ -2189,7 +2190,10 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
     int ci, vi, s_idx;
     double fx, fy, fz, ftmp, cx, cy, cz, dx, dy ,dz, dr_min, dr_max, r_min, r_max, R;
     vector<int> tN_list;
-    int div=1;
+    double Ldiv0=1.0;
+    double x_max, x_min;
+    int i;
+    wpos = 0.0;
     // check correct setup
     setupCheck();
 
@@ -2280,6 +2284,16 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
             break;
     }
      */
+    x_max = 0.0;
+    for (i = 0; i < tN; i++){
+        x_max = x_max > x[NDIM*i] ? x_max : x[NDIM*i];
+    }
+    x_min = L[0];
+    for (i = tN; i < NVTOT; i++){
+        x_min = x_min < x[NDIM*i] ? x_min : x[NDIM*i];
+    }
+    Ldiv0 = (x_max * r[tN] + x_min* r[tN-1])/(r[tN-1] + r[tN]);
+    
     printTumorInterface(0.0);
     
     k=0;
@@ -2292,8 +2306,7 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
         if(phi0 < 0.1) {
             scaleParticleSizes3D(pow((phi0 + dphi0) / phi0,-1.0/3.0));
         }
-        else if(phi0<0.25){
-            div = 0;
+        else if(phi0<0.35){
             L[0] *= 0.99;
             L[1] *= 0.99;
             L[2] *= 0.99;
@@ -2311,7 +2324,7 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
            // scaleFactor = pow((phi0 + dphi0) / phi0,-1.0/3.0);
             //scaleParticleSizes3D(scaleFactor);
         //}
-        tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, Ftol, dt0, div);
+        Ldiv0 = tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, Ftol, dt0, Ldiv0);
         
         pcheck = wpress[0];
         
@@ -2428,11 +2441,12 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         }
         r1.back() = distribution(gen);
         r2.back() = distribution(gen);
+
         V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
         wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
         
         // update psi before update force
-        psiDiffusion();
+        psiDiffusion(k);
         //psiECM();
         
         // sort particles

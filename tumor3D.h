@@ -59,7 +59,7 @@ public:
 
     // biology functions
     void initializePsi();
-    void psiDiffusion();
+    void psiDiffusion(int seed);
     void crawlerUpdate();
 
     // force updates
@@ -71,7 +71,7 @@ public:
     void stickyTumorInterfaceForceUpdate();
 
     // integrators
-    void tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, int div);
+    double tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, double Ldiv0);
 
     // protocols
     void setupCheck();
