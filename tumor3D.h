@@ -42,6 +42,7 @@ public:
 
     void readPolyhedron();
     void initializePolyhedron(double aCalA0);
+    void initializeTheta0();
     
     // setters
     void setgamtt(double val) { gamtt = val; };
@@ -71,7 +72,7 @@ public:
     void stickyTumorInterfaceForceUpdate();
 
     // integrators
-    double tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, double Ldiv0);
+    double tumorFIRE(tumor3DMemFn forceCall, double Ftol, double dt0, double P0);
 
     // protocols
     void setupCheck();

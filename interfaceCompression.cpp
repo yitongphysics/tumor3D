@@ -1,5 +1,5 @@
 // header files
-
+/*
 #include "tumor3D.h"
 #include <sstream>
 #include <numeric>
@@ -42,7 +42,7 @@ int main(int argc, char const *argv[])
     string P0_str           = "0.0001";
 	string seed_str 		= "1";
 	string positionFile 	= "/Users/yitongzheng/Documents/Corey/tumor3D/C.test";
-     
+    */
     /*
     string aN_str             = argv[1];
     string aNV_str             = argv[2];
@@ -62,6 +62,7 @@ int main(int argc, char const *argv[])
     string seed_str         = argv[16];
     string positionFile     = argv[17];
     */
+/*
 	// using sstreams to get parameters
 	stringstream aNss(aN_str);
 	stringstream aNVss(aNV_str);
@@ -139,3 +140,4 @@ int main(int argc, char const *argv[])
 	return 0;
 }
 
+*/

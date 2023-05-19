@@ -1,5 +1,5 @@
 // header files
-/*
+
 #include "tumor3D.h"
 #include <sstream>
 
@@ -11,8 +11,8 @@ using namespace std;
 
 const double gamtt = 0.0;                 // surface tension
 const double boxLengthScale = 2.5;        // neighbor list box size in units of initial l0
-const double dt0 = 0.1;                // initial magnitude of time step in units of MD time
-const double Ftol = 1e-7;
+const double dt0 = 0.03;                // initial magnitude of time step in units of MD time
+const double Ftol = 1e-9;
 
 int main(int argc, char const *argv[])
 {
@@ -47,14 +47,14 @@ int main(int argc, char const *argv[])
     string seed_str         = argv[19];                // seed for rng
     string positionFile     = argv[20];                // output file string
     */
-    /*
+    
     // read in parameters from command line input
-    string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/22div.test";                // input file with initial configuration
+    string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/c0507_kb/07kb.test";                // input file with initial configuration
     string NT_str           = "3000";                // # of time steps
     string NPRINTSKIP_str   = "100";                // # of steps between prints
     string l1_str           = "0.1";                // attraction strength (must be < l2)
     string l2_str           = "0.2";                // attraction range (must be > l1)
-    string v0_str           = "0.0001";                // tumor cell crawling speed
+    string v0_str           = "0.001";                // tumor cell crawling speed
     string f0_str           = "0.01";
     string Dr0_str          = "0.000001";                // initial angular diffusion
     string aCalA0_str       = "1.1";                // calA0 of adipocyte
@@ -63,12 +63,12 @@ int main(int argc, char const *argv[])
     string kv_str           = "10.0";             // kv
     string ka_str           = "0.1";             // ka
     string kc_str           = "0.03";             // kc
-    string kb_str           = "0.0";             // kb
+    string kb_str           = "0.1";             // kb
     string M_str            = "1.0";
-    string P0_str           = "0.0001";
+    string P0_str           = "0.001";
     string volumeRatio_str  = "45";                //
     string seed_str         = "17";                // seed for rng
-    string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/P.pos";                // output file string
+    string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/c0507_kb/P.pos";                // output file string
     
 
     // using sstreams to get parameters
@@ -149,12 +149,15 @@ int main(int argc, char const *argv[])
     // initialize neighbor linked list
     tumor3Dobj.initializeNeighborLinkedList3D(boxLengthScale);
     tumor3Dobj.initializePsi();
+    tumor3Dobj.initializeTheta0();
+    
     // invasion
     cout.precision(10);
     cout << "Running invasion protocol..." << endl;
 
     tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,0,NT,NPRINTSKIP);
-
+    //tumor3Dobj.tumorCompression(Ftol,P0,dt0,0.001);
+    
     // say goodbye
     cout << "\n** Finished interfaceInvasion.cpp, ending. " << endl;
 
@@ -163,4 +166,4 @@ int main(int argc, char const *argv[])
  
 
 
-*/
+

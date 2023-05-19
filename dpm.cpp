@@ -66,7 +66,7 @@ dpm::dpm(int n, int ndim, int seed) {
     std::vector<std::vector<int>>        nnlist(NN_NUM, vector<int>(2, 0));
     std::vector<double>             A0_unit(FNUM, 0.0), A0(FNUM, 0.0);
     std::vector<double>             xyz_unit(3 * SNUM, 0.0);
-    
+    std::vector<std::vector<double>>        theta0(NCELLS, vector<double>(ENUM, 0.0));
     D0_inter_unit = 0.0;
 	// set scalars to default values
 	dt = 0.0;

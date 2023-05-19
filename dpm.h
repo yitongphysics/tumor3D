@@ -90,6 +90,7 @@ protected:
     std::vector<std::vector<int>>        nnlist;
     std::vector<double>             A0_unit;
     std::vector<double>             A0;
+    std::vector<std::vector<double>>        theta0;
     std::vector<double>             xyz_unit;
 
 	// dynamical variables
