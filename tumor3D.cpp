@@ -2015,7 +2015,7 @@ void tumor3D::stickyTumorInterfaceForces(){
 
 void tumor3D::repulsiveTumorInterfaceForceUpdate() {
     resetForcesAndEnergy();
-    //crawlerUpdate();
+    crawlerUpdate();
     repulsiveTumorInterfaceForces();
     tumorShapeForces();
 }
@@ -2395,6 +2395,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     
     // local variables
     int k, i, ci, gi, upb = 20000;
+    int tDOF = tN*NDIM;
     double t = 0.0;
     double subBoxLength = 2.5;
     double x_max=0;
@@ -2468,21 +2469,25 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         
         /*******************************************************************************************************************************/
         // update positions (Velocity Verlet, OVERDAMPED) & update velocity 1st term
-        for (i=0; i<vertDOF; i++){
-            r1[i] = distribution(gen);
-            r2[i] = distribution(gen);
+        for (i=0; i<tDOF; i++){
+            //r1[i] = distribution(gen);
+            //r2[i] = distribution(gen);
             
-            v[i] = v[i] + dt*0.5*F[i] -dt*0.5*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i]-B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
-            x[i] += dt*v[i] + dt_15*sg*0.5*sqr_3*r2[i];
+            v[i] = v[i] + dt*0.5*F[i] -dt*0.5*B*v[i] - 0.125*dt_2*B*(F[i]-B*v[i]);
+            x[i] += dt*v[i];
         }
-        r1.back() = distribution(gen);
-        r2.back() = distribution(gen);
+        for (i=tDOF; i<vertDOF; i++){
+            v[i] = v[i] + dt*0.5*F[i];
+            x[i] += dt*v[i];
+        }
+        //r1.back() = distribution(gen);
+        //r2.back() = distribution(gen);
 
-        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
-        wpos += dt*V_wall + dt_15*sg*0.5*sqr_3*r2.back();
+        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall - 0.125*dt_2*B*(F_wall-B*V_wall);
+        wpos += dt*V_wall;
         
         // update psi before update force
-        //psiDiffusion(k);
+        psiDiffusion(k);
         //psiECM();
         
         // sort particles
@@ -2493,9 +2498,12 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         F_wall = (P0 - wpress[0]) * L[1] * L[2];
         
         // update velocity 2nd term (Velocity Verlet, OVERDAMPED)
-        for (i=0; i<vertDOF; i++)
-            v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i] - B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
-        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall + 0.5*dt_sqr*sg*r1.back() - 0.125*dt_2*B*(F_wall-B*V_wall) - 0.25*dt_15*B*sg*(0.5*r1.back()+sqr_3*r2.back());
+        for (i=0; i<tDOF; i++)
+            v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] - 0.125*dt_2*B*(F[i] - B*v[i]);
+        for (i=tDOF; i<vertDOF; i++)
+            v[i] = v[i] + 0.5*dt*F[i];
+        
+        V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall - 0.125*dt_2*B*(F_wall-B*V_wall);
 
         // update time
         t += dt;
