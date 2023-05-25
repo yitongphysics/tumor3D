@@ -49,12 +49,12 @@ int main(int argc, char const *argv[])
     */
     
     // read in parameters from command line input
-    string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/22div.test";                // input file with initial configuration
+    string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/0521_Amax/22div_noTumor.test";                // input file with initial configuration
     string NT_str           = "3000";                // # of time steps
     string NPRINTSKIP_str   = "100";                // # of steps between prints
     string l1_str           = "0.0";                // attraction strength (must be < l2)
     string l2_str           = "0.0";                // attraction range (must be > l1)
-    string v0_str           = "0.0";                // tumor cell crawling speed
+    string v0_str           = "0.0001";                // tumor cell crawling speed
     string f0_str           = "0.0";
     string Dr0_str          = "1.0";                // initial angular diffusion
     string aCalA0_str       = "1.1";                // calA0 of adipocyte
@@ -68,7 +68,7 @@ int main(int argc, char const *argv[])
     string P0_str           = "0.0009";
     string volumeRatio_str  = "45";                //
     string seed_str         = "16";                // seed for rng
-    string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/P.pos";                // output file string
+    string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/0521_Amax/P.pos";                // output file string
     
 
     // using sstreams to get parameters
