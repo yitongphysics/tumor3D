@@ -292,7 +292,7 @@ void dpm::com3D(int ci, double &cx, double &cy, double &cz) {
     cz = fmod(cz,L[2]);
 }
 
-// get cell center of mass position
+// get cell center of mass force
 void dpm::cof3D(int ci, double &fx, double &fy, double &fz) {
     // local variables
     int vi, gi, nvtmp;
@@ -312,7 +312,7 @@ void dpm::cof3D(int ci, double &fx, double &fy, double &fz) {
     }
 }
 
-// get cell center of mass position
+// get cell center of mass velocity
 void dpm::cov3D(int ci, double &vx, double &vy, double &vz) {
     // local variables
     int vi, gi, nvtmp;
@@ -330,6 +330,11 @@ void dpm::cov3D(int ci, double &vx, double &vy, double &vz) {
         vy += v[NDIM * (gi + vi)+1];
         vz += v[NDIM * (gi + vi)+2];
     }
+    
+    // take average to get cov
+    vx /= nvtmp;
+    vy /= nvtmp;
+    vz /= nvtmp;
 }
 
 double dpm::NN3D(int gi){

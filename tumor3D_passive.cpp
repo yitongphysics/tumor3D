@@ -199,7 +199,7 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(3) {
 void tumor3D::readPolyhedron(){
     // Read in D0, V0, and A0 for the unit cell, and edge list and face list
     int i;
-    int hm = 1;
+    int hm = 0;
     A0_unit.resize(FNUM, 0.0);
     A0.resize(FNUM, 0.0);
     
@@ -1120,26 +1120,26 @@ void tumor3D::psiDiffusion(int seed){
 void tumor3D::crawlerUpdate(){
     // local variables
     int ci;
-    //double r1, r2, r3;
-    //double chi;
+    double r1, r2, r3;
+    double chi;
     
-    //random_device rd;
-    //default_random_engine gen(rd());
-    //normal_distribution<double> distribution(0.0, 1.0);
+    random_device rd;
+    default_random_engine gen(rd());
+    normal_distribution<double> distribution(0.0, 1.0);
     
     // loop over all cells, vertices
     for (ci=0; ci<tN; ci++){
         
         // generate random variable
-        //r1 = distribution(gen);
-        //r2 = distribution(gen);
-        //r3 = distribution(gen);
+        r1 = distribution(gen);
+        r2 = distribution(gen);
+        r3 = distribution(gen);
         
-        //chi = f0*sqrt(r1*r1+r2*r2+r3*r3);
+        chi = f0*sqrt(r1*r1+r2*r2+r3*r3);
         
-        F[NDIM*ci]     += f0*psi[NDIM*ci];
-        F[NDIM*ci + 1] += f0*psi[NDIM*ci + 1];
-        F[NDIM*ci + 2] += f0*psi[NDIM*ci + 2];
+        F[NDIM*ci]     += chi*psi[NDIM*ci];
+        F[NDIM*ci + 1] += chi*psi[NDIM*ci + 1];
+        F[NDIM*ci + 1] += chi*psi[NDIM*ci + 2];
     }
 }
 
@@ -2098,7 +2098,7 @@ void tumor3D::stickyTumorInterfaceForces(){
 
 void tumor3D::repulsiveTumorInterfaceForceUpdate() {
     resetForcesAndEnergy();
-    crawlerUpdate();
+    //crawlerUpdate();
     repulsiveTumorInterfaceForces();
     tumorShapeForces();
     adipocyteECMAdhesionForces();
@@ -2106,7 +2106,7 @@ void tumor3D::repulsiveTumorInterfaceForceUpdate() {
 
 void tumor3D::stickyTumorInterfaceForceUpdate() {
     resetForcesAndEnergy();
-    crawlerUpdate();
+    //crawlerUpdate();
     stickyTumorInterfaceForces();
     tumorShapeForces();
     adipocyteECMAdhesionForces();
@@ -2506,9 +2506,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     vector<double> r2;
     double sg = sqrt(2*B*v0);
     vector<int> tN_list;
-
-    double x_copy = 0.0;
-    double v_copy = 0.0;
+    int rev = 0;
     double cx,cy,cz;
 
     for (gi=0; gi<NVTOT*NDIM+1; gi++){
@@ -2545,8 +2543,6 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     CALL_MEMBER_FN(*this, forceCall)();
     F_wall = (P0 - wpress[0]) * L[1] * L[2];
     
-    
-    
     //printTumorInterface(t);
     //H = tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, 1e-7, 0.03, P0);
     printTumorInterface(t);
@@ -2564,33 +2560,18 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         
         /*******************************************************************************************************************************/
         // update positions (Velocity Verlet, OVERDAMPED) & update velocity 1st term
-        for (i=0; i<tDOF; i++){
-            //r1[i] = distribution(gen);
-            //r2[i] = distribution(gen);
+        for (i=0; i<vertDOF; i++){
+            r1[i] = distribution(gen);
+            r2[i] = distribution(gen);
             
-            v[i] = v[i] + dt*0.5*F[i] -dt*0.5*B*v[i] - 0.125*dt_2*B*(F[i]-B*v[i]);
-            x[i] += dt*v[i];
-            
-            //v[i] = v[i] + dt*0.5*F[i] -dt*0.5*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i]-B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
-            //x[i] += dt*v[i] + dt_15*sg*0.5*sqr_3*r2[i];
+            v[i] = v[i] + dt*0.5*F[i] -dt*0.5*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i]-B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
+            x[i] += dt*v[i] + dt_15*sg*0.5*sqr_3*r2[i];
         }
-        for (i=tDOF; i<vertDOF; i++){
-            //r1[i] = distribution(gen);
-            //r2[i] = distribution(gen);
-            
-            v[i] = v[i] + dt*0.5*F[i];
-            x[i] += dt*v[i];
-            
-            //v[i] = v[i] + dt*0.5*F[i] -dt*0.5*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i]-B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
-            //x[i] += dt*v[i] + dt_15*sg*0.5*sqr_3*r2[i];
-        }
-        //r1.back() = distribution(gen);
-        //r2.back() = distribution(gen);
         V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall - 0.125*dt_2*B*(F_wall-B*V_wall);
         wpos += dt*V_wall;
         
         // update psi before update force
-        psiDiffusion(k);
+        //psiDiffusion(k);
         //psiECM();
         
         // sort particles
@@ -2601,35 +2582,32 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         F_wall = (P0 - wpress[0]) * L[1] * L[2];
         
         // update velocity 2nd term (Velocity Verlet, OVERDAMPED)
-        for (i=0; i<tDOF; i++)
-            v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] - 0.125*dt_2*B*(F[i] - B*v[i]);
-        for (i=tDOF; i<vertDOF; i++)
-            v[i] = v[i] + 0.5*dt*F[i];
-            //v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i] - B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
+        for (i=0; i<vertDOF; i++)
+            v[i] = v[i] + 0.5*dt*F[i] - 0.5*dt*B*v[i] + 0.5*dt_sqr*sg*r1[i] - 0.125*dt_2*B*(F[i] - B*v[i]) - 0.25*dt_15*B*sg*(0.5*r1[i]+sqr_3*r2[i]);
         
         V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall - 0.125*dt_2*B*(F_wall-B*V_wall);
 
-        
         // update time
         t += dt;
         /********************************************************************************************************************************/
-        //sg = sqrt(4*B*Kt/3/tN);
+        //update noise term
+        Kt=0.0;
+        for (int i = 0; i < tN*NDIM; i++){
+            Kt += v[i] * v[i];
+        }
+        Kt *= 0.5;
         // print message console, print position to file
         if (((k+1) % NPRINTSKIP == 0) || k==0){
             //kinetic energy
             K=0.0;
-            Kt=0.0;
             Ka= 0.0;
             for (int i = 0; i < tN*NDIM; i++){
                 K += v[i] * v[i];
-                Kt += v[i] * v[i];
             }
             for (int i = tN*NDIM; i < vertDOF; i++)
                 K += v[i] * v[i];
-            
             K *= 0.5;
-            Kt *= 0.5;
-
+            
             //Ka
             for (int i = tN; i<NCELLS; i++){
                 cov3D(i, vxtmp, vytmp, vztmp);
@@ -2693,25 +2671,13 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
                 printTumorInterface(t);
                 //annealing
                 /*
-                if ((k+1) % (NPRINTSKIP*500) == 0 && (k+1)<NT/2.0) {
-                    for (int i = 0; i < vertDOF; i++)
-                        v[i] *= 2.0;
+                if ((L[0]-wpos)>20.0)
+                    rev=1;
+                if ((k+1) % (NPRINTSKIP*500) == 0 && (k+1)<NT/2.0 && rev==0) {
+                    sg *= 2.0;
                 }
-                else if((k+1) % (NPRINTSKIP*500) == 0 && (k+1)>NT/2.0) {
-                    for (int i = 0; i < vertDOF; i++)
-                        v[i] *= 0.5;
-                }
-                */
-                //switch y and z
-                /*
-                for(i=0;i<NVTOT;i++){
-                    x_copy = x[i*NDIM+1];
-                    x[i*NDIM+1] = x[i*NDIM+2];
-                    x[i*NDIM+2] = L[1]-x_copy;
-                    
-                    v[i*NDIM] = 0.0;
-                    v[i*NDIM+1] = 0.0;
-                    v[i*NDIM+2] = 0.0;
+                else if(  (k+1) % (NPRINTSKIP*500) == 0 && ((k+1)>NT/2.0  || rev==1)) {
+                    sg *= 0.5;
                 }
                 */
             }

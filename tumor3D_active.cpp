@@ -199,7 +199,7 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(3) {
 void tumor3D::readPolyhedron(){
     // Read in D0, V0, and A0 for the unit cell, and edge list and face list
     int i;
-    int hm = 1;
+    int hm = 0;
     A0_unit.resize(FNUM, 0.0);
     A0.resize(FNUM, 0.0);
     
@@ -1070,14 +1070,12 @@ void tumor3D::psiDiffusion(int seed){
     random_device rd;
     default_random_engine gen(rd());
     normal_distribution<double> distribution(0.0, 1.0);
-    //random_device rd;
-    //mt19937 gen(rd());
-    //uniform_real_distribution<> dis(0, 1);
     
     double sg = sqrt(Dr0*2.0)*dt;
     // update director for each cell
     //FILE* psiFile = fopen("/Users/yitongzheng/Documents/Corey/tumor3D/psi.txt", "a");
     for (ci=0; ci<tN; ci++){
+        
         psi_x = psi[ci*NDIM];
         psi_y = psi[ci*NDIM + 1];
         psi_z = psi[ci*NDIM + 2];
@@ -1120,28 +1118,16 @@ void tumor3D::psiDiffusion(int seed){
 void tumor3D::crawlerUpdate(){
     // local variables
     int ci;
-    //double r1, r2, r3;
-    //double chi;
-    
-    //random_device rd;
-    //default_random_engine gen(rd());
-    //normal_distribution<double> distribution(0.0, 1.0);
     
     // loop over all cells, vertices
     for (ci=0; ci<tN; ci++){
-        
-        // generate random variable
-        //r1 = distribution(gen);
-        //r2 = distribution(gen);
-        //r3 = distribution(gen);
-        
-        //chi = f0*sqrt(r1*r1+r2*r2+r3*r3);
         
         F[NDIM*ci]     += f0*psi[NDIM*ci];
         F[NDIM*ci + 1] += f0*psi[NDIM*ci + 1];
         F[NDIM*ci + 2] += f0*psi[NDIM*ci + 2];
     }
 }
+
 
 void tumor3D::adipocyteECMAdhesionForces(){
     int gi, ci, vi, xind, yind, zind, nvtmp, pinCellInd;
@@ -1190,7 +1176,6 @@ void tumor3D::adipocyteECMAdhesionForces(){
         
     }
 }
-
 
 /******************************
 
@@ -2506,11 +2491,9 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     vector<double> r2;
     double sg = sqrt(2*B*v0);
     vector<int> tN_list;
-
-    double x_copy = 0.0;
-    double v_copy = 0.0;
+    int rev=0;
     double cx,cy,cz;
-
+    
     for (gi=0; gi<NVTOT*NDIM+1; gi++){
         r1.push_back(0.0);
         r2.push_back(0.0);
@@ -2544,8 +2527,6 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     // initial pressure
     CALL_MEMBER_FN(*this, forceCall)();
     F_wall = (P0 - wpress[0]) * L[1] * L[2];
-    
-    
     
     //printTumorInterface(t);
     //H = tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, 1e-7, 0.03, P0);
@@ -2609,27 +2590,28 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         
         V_wall = V_wall + dt*0.5*F_wall -dt*0.5*B*V_wall - 0.125*dt_2*B*(F_wall-B*V_wall);
 
-        
         // update time
         t += dt;
         /********************************************************************************************************************************/
+        //update noise term
+        Kt=0.0;
+        for (int i = 0; i < tN*NDIM; i++){
+            Kt += v[i] * v[i];
+        }
+        Kt *= 0.5;
         //sg = sqrt(4*B*Kt/3/tN);
         // print message console, print position to file
         if (((k+1) % NPRINTSKIP == 0) || k==0){
             //kinetic energy
             K=0.0;
-            Kt=0.0;
             Ka= 0.0;
             for (int i = 0; i < tN*NDIM; i++){
                 K += v[i] * v[i];
-                Kt += v[i] * v[i];
             }
             for (int i = tN*NDIM; i < vertDOF; i++)
                 K += v[i] * v[i];
-            
             K *= 0.5;
-            Kt *= 0.5;
-
+            
             //Ka
             for (int i = tN; i<NCELLS; i++){
                 cov3D(i, vxtmp, vytmp, vztmp);
@@ -2693,25 +2675,27 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
                 printTumorInterface(t);
                 //annealing
                 /*
-                if ((k+1) % (NPRINTSKIP*500) == 0 && (k+1)<NT/2.0) {
-                    for (int i = 0; i < vertDOF; i++)
-                        v[i] *= 2.0;
+                if ((L[0]-wpos)>20.0)
+                    rev=1;
+                if ((k+1) % (NPRINTSKIP*500) == 0 && (k+1)<NT/2.0 && rev==0) {
+                    f0 *= 1.35;
                 }
-                else if((k+1) % (NPRINTSKIP*500) == 0 && (k+1)>NT/2.0) {
-                    for (int i = 0; i < vertDOF; i++)
-                        v[i] *= 0.5;
+                else if(  (k+1) % (NPRINTSKIP*500) == 0 && ((k+1)>NT/2.0  || rev==1)) {
+                    f0 *= 0.74;
                 }
                 */
                 //switch y and z
                 /*
-                for(i=0;i<NVTOT;i++){
-                    x_copy = x[i*NDIM+1];
-                    x[i*NDIM+1] = x[i*NDIM+2];
-                    x[i*NDIM+2] = L[1]-x_copy;
-                    
-                    v[i*NDIM] = 0.0;
-                    v[i*NDIM+1] = 0.0;
-                    v[i*NDIM+2] = 0.0;
+                if ((k+1) % (NPRINTSKIP*50) == 0){
+                    for(i=0;i<NVTOT;i++){
+                        x_copy = x[i*NDIM+1];
+                        x[i*NDIM+1] = x[i*NDIM+2];
+                        x[i*NDIM+2] = L[1]-x_copy;
+                        
+                        v[i*NDIM] = 0.0;
+                        v[i*NDIM+1] = 0.0;
+                        v[i*NDIM+2] = 0.0;
+                    }
                 }
                 */
             }
