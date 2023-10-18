@@ -63,6 +63,7 @@ public:
     void psiDiffusion(int seed);
     void crawlerUpdate();
     void adipocyteECMAdhesionForces();
+    void relocatePinPoint(double polydispersity);
     // force updates
     void resetForcesAndEnergy();
     void tumorShapeForces();
