@@ -118,7 +118,10 @@ tumor3D::tumor3D(string &inputFileStr,int seed) : dpm(3) {
     pinpos.resize(NDIM * (NCELLS - tN));
     pinattach.resize(NCELLS - tN);
     ifbroken.resize(NCELLS - tN);
-
+    ECMList.resize(0);
+    kECMList.resize(0);
+    lECMList.resize(0);
+    
     // initialize NVTOT to 0
     NVTOT = 0;
 
@@ -1284,8 +1287,9 @@ void tumor3D::relocatePinPoint(double polydispersity){
                 
                 // check if simulation is stuck
                 if (npNeg > NNEGMAX){
-                    cerr << "    ** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
-                    exit(1);
+                    //cerr << "    ** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+                    //exit(1);
+                    break;
                 }
                 
                 // take half step backwards, reset velocities
@@ -1448,6 +1452,117 @@ void tumor3D::relocatePinPoint(double polydispersity){
     }
 }
 
+
+void tumor3D::adipocyteECMAdhesionNeighborList(){
+    int ci,cj;
+    int aN = NCELLS - tN;
+    double dx, dy, dz, ri;
+    double L1_inv = 1.0 / L[1];
+    double L2_inv = 1.0 / L[2];
+    double kDisperse = 0.5;
+    double nvtmp = 42.0;
+    int numSpring = 6*aN/2;
+    double sij_C;
+    vector <double> sij(aN*aN,100.0);
+    
+    for(ci=0; ci<aN; ci++) {
+        for(cj=ci+1; cj<aN; cj++) {
+            dx = pinpos[NDIM*cj] - pinpos[NDIM*ci];
+            dy = pinpos[NDIM * cj + 1] - pinpos[NDIM * ci + 1];
+            dy -= L[1] * round(dy * L1_inv);
+            dz = pinpos[NDIM * cj + 2] - pinpos[NDIM * ci + 2];
+            dz -= L[2] * round(dz * L2_inv);
+            sij[ci*aN+cj] = sqrt(dx * dx + dy * dy + dz * dz);
+        }
+    }
+    
+    auto sij_sorted = sij;
+    sort(sij_sorted.begin(), sij_sorted.end());
+    sij_C = sij_sorted[numSpring-1];
+    
+    
+    for(ci=0; ci<aN; ci++) {
+        for(cj=ci+1; cj<aN; cj++) {
+            if (sij[ci*aN+cj]<=sij_C) {
+                
+                ECMList.push_back(ci);
+                ECMList.push_back(cj);
+                kECMList.push_back(1.0/nvtmp*kecm);
+                //lECMList.push_back(0.0);
+                if (pinpos[NDIM * cj + 2] < L[2]/2 && pinpos[NDIM * ci + 2] < L[2]/2) {
+                    lECMList.push_back(sij[ci*aN+cj]*kDisperse);
+                }
+                else {
+                    lECMList.push_back(sij[ci*aN+cj]*2.0);
+                }
+                
+            }
+            
+        }
+    }
+}
+
+void tumor3D::adipocyteECMAdhesionNeighborSpring(){
+    int num_Neighbor = kECMList.size();
+    int ni=0,ci,cj;
+    double cxi,cyi,czi,cxj,cyj,czj;
+    double dpinx, dpiny, dpinz, dpin;
+    double vi,xind,yind,zind;
+    int gi,nvtmp = 42;
+    double l0_l = 0.0;
+    
+    while(ni<num_Neighbor){
+        ci = ECMList[2*ni]+tN;
+        cj = ECMList[2*ni + 1]+tN;
+        
+        com3D(ci,cxi,cyi,czi);
+        com3D(cj,cxj,cyj,czj);
+        
+        // get distance to pin
+        dpinx = cxi - cxj;
+
+        dpiny = cyi - cyj;
+        dpiny -= L[1]*round(dpiny/L[1]);
+        
+        dpinz = czi - czj;
+        dpinz -= L[1]*round(dpinz/L[2]);
+
+        dpin = sqrt(dpinx*dpinx + dpiny*dpiny + dpinz*dpinz);
+        
+        U += 0.5*kECMList[ni]*(dpin-lECMList[ni])*(dpin-lECMList[ni]);
+        
+        l0_l = (1-lECMList[ni]/dpin);
+        // pin forces on each vertex
+        gi = szList[ci];
+        for (vi=0; vi<nvtmp; vi++){
+            // positions using global indexing
+            xind = NDIM*(gi+vi);
+            yind = xind + 1;
+            zind = xind + 2;
+            
+            F[xind]     -= kECMList[ni]*dpinx * l0_l;
+            F[yind]     -= kECMList[ni]*dpiny * l0_l;
+            F[zind]     -= kECMList[ni]*dpinz * l0_l;
+        }
+        
+        gi = szList[cj];
+        for (vi=0; vi<nvtmp; vi++){
+            // positions using global indexing
+            xind = NDIM*(gi+vi);
+            yind = xind + 1;
+            zind = xind + 2;
+            
+            F[xind]     += kECMList[ni]*dpinx * l0_l;
+            F[yind]     += kECMList[ni]*dpiny * l0_l;
+            F[zind]     += kECMList[ni]*dpinz * l0_l;
+        }
+
+        
+        
+        ni++;
+    }
+    
+}
 /******************************
 
     F O R C E
@@ -2357,7 +2472,8 @@ void tumor3D::repulsiveTumorInterfaceForceUpdate() {
     //crawlerUpdate();
     repulsiveTumorInterfaceForces();
     tumorShapeForces();
-    adipocyteECMAdhesionForces();
+    //adipocyteECMAdhesionForces();
+    adipocyteECMAdhesionNeighborSpring();
 }
 
 void tumor3D::stickyTumorInterfaceForceUpdate() {
@@ -2365,7 +2481,8 @@ void tumor3D::stickyTumorInterfaceForceUpdate() {
     //crawlerUpdate();
     stickyTumorInterfaceForces();
     tumorShapeForces();
-    adipocyteECMAdhesionForces();
+    //adipocyteECMAdhesionForces();
+    adipocyteECMAdhesionNeighborSpring();
 }
 
 
@@ -2858,14 +2975,9 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
         pinpos.at(NDIM*(ci-tN) + 1) = cy;
         pinpos.at(NDIM*(ci-tN) + 2) = cz;
     }
-    relocatePinPoint(1000.0);
+    //relocatePinPoint(1000.0);
+    adipocyteECMAdhesionNeighborList();
     
-    for (ci=tN; ci<NCELLS; ci++){
-        //cout << pinpos.at(NDIM*(ci-tN)) << endl;
-        //cout << pinpos.at(NDIM*(ci-tN) + 1) << endl;
-        //cout << pinpos.at(NDIM*(ci-tN) + 2) << endl;
-    }
-    tumorFIRE(&tumor3D::repulsiveTumorInterfaceForceUpdate, 1e-6, dt, P0);
     
     // initial pressure
     CALL_MEMBER_FN(*this, forceCall)();
@@ -2924,6 +3036,26 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
             Kt += v[i] * v[i];
         }
         Kt *= 0.5;
+        
+        // make sure Vy=0
+        Vy=0.0;
+        for (ci=0; ci<NVTOT; ci++){
+            Vy += v[NDIM*ci + 1];
+        }
+        Vy = Vy/NVTOT;
+        for (ci=0; ci<NVTOT; ci++){
+            v[NDIM*ci + 1] -=Vy;
+        }
+        // make sure Vz=0
+        Vy=0.0;
+        for (ci=0; ci<NVTOT; ci++){
+            Vy += v[NDIM*ci + 2];
+        }
+        Vy = Vy/NVTOT;
+        for (ci=0; ci<NVTOT; ci++){
+            v[NDIM*ci + 2] -=Vy;
+        }
+        
         // print message console, print position to file
         if (((k+1) % NPRINTSKIP == 0) || k==0){
             //kinetic energy
@@ -2946,24 +3078,6 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
             //H
             H = U+P0*L[1]*L[2]*(L[0]-wpos) + K + V_wall*V_wall*0.5;
             
-            // make sure Vy=0
-            Vy=0.0;
-            for (ci=0; ci<NVTOT; ci++){
-                Vy += v[NDIM*ci + 1];
-            }
-            Vy = Vy/NVTOT;
-            for (ci=0; ci<NVTOT; ci++){
-                v[NDIM*ci + 1] -=Vy;
-            }
-            // make sure Vz=0
-            Vy=0.0;
-            for (ci=0; ci<NVTOT; ci++){
-                Vy += v[NDIM*ci + 2];
-            }
-            Vy = Vy/NVTOT;
-            for (ci=0; ci<NVTOT; ci++){
-                v[NDIM*ci + 2] -=Vy;
-            }
             
             //find front
             x_max = 0.0;

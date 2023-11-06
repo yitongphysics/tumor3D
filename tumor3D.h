@@ -32,6 +32,10 @@ protected:
     std::vector<double> pinpos;
     std::vector<double> pinattach;
     std::vector<double> ifbroken;
+    std::vector<int> ECMList;
+    std::vector<double> kECMList;
+    std::vector<double> lECMList;
+
 
 public:
 
@@ -64,6 +68,8 @@ public:
     void crawlerUpdate();
     void adipocyteECMAdhesionForces();
     void relocatePinPoint(double polydispersity);
+    void adipocyteECMAdhesionNeighborList();
+    void adipocyteECMAdhesionNeighborSpring();
     // force updates
     void resetForcesAndEnergy();
     void tumorShapeForces();
