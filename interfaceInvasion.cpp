@@ -11,8 +11,8 @@ using namespace std;
 
 const double gamtt = 0.0;                 // surface tension
 const double boxLengthScale = 2.5;        // neighbor list box size in units of initial l0
-const double dt0 = 0.03;                // initial magnitude of time step in units of MD time
-const double Ftol = 1e-9;
+const double dt0 = 0.1;                // initial magnitude of time step in units of MD time
+const double Ftol = 1e-4;
 
 int main(int argc, char const *argv[])
 {
@@ -22,9 +22,9 @@ int main(int argc, char const *argv[])
 
     // local variables to be read in
     int NT, NPRINTSKIP, seed;
-    double NTdbl, NPRINTSKIPdbl, l1, l2, v0, f0, Dr0, aCalA0, kecm, ecmbreak, kv, ka, kb, kc, M, P0, volumeRatio;
+    double NTdbl, NPRINTSKIPdbl, l1, l2, v0, f0, Dr0, aCalA0, kecm, ecmbreak, kv, ka, kb, kc, M, P0, tR;
 
-    /*
+    
     // read in parameters from command line input
     string inputFile         = argv[1];                // input file with initial configuration
     string NT_str             = argv[2];                // # of time steps
@@ -43,15 +43,15 @@ int main(int argc, char const *argv[])
     string kb_str           = argv[15];             // kb
     string M_str            = argv[16];
     string P0_str           = argv[17];
-    string volumeRatio_str  = argv[18];
+    string tR_str           = argv[18];
     string seed_str         = argv[19];                // seed for rng
     string positionFile     = argv[20];                // output file string
-    */
     
+    /*
     // read in parameters from command line input
-    string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/0521_Amax/22div_noTumor.test";                // input file with initial configuration
-    string NT_str           = "3000";                // # of time steps
-    string NPRINTSKIP_str   = "100";                // # of steps between prints
+    string inputFile        = "/Users/yitongzheng/Documents/Corey/tumor3D/22div.test";                // input file with initial configuration
+    string NT_str           = "9e9";                // # of time steps
+    string NPRINTSKIP_str   = "300";                // # of steps between prints
     string l1_str           = "0.0";                // attraction strength (must be < l2)
     string l2_str           = "0.0";                // attraction range (must be > l1)
     string v0_str           = "0.0001";                // tumor cell crawling speed
@@ -60,16 +60,16 @@ int main(int argc, char const *argv[])
     string aCalA0_str       = "1.1";                // calA0 of adipocyte
     string kecm_str         = "0.0";                // ecm adhesion strength
     string ecmbreak_str     = "0.0";                // ecm adhesion range
-    string kv_str           = "10.0";             // kv
-    string ka_str           = "0.1";             // ka
-    string kc_str           = "0.03";             // kc
+    string kv_str           = "1.0";             // kv
+    string ka_str           = "1.0";             // ka
+    string kc_str           = "1.0";             // kc
     string kb_str           = "0.0";             // kb
     string M_str            = "1.0";
     string P0_str           = "0.0009";
-    string volumeRatio_str  = "45";                //
+    string tR_str  = "10";                //
     string seed_str         = "16";                // seed for rng
-    string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/0521_Amax/P.pos";                // output file string
-    
+    string positionFile     = "/Users/yitongzheng/Documents/Corey/tumor3D/P.pos";                // output file string
+    */
 
     // using sstreams to get parameters
     stringstream NTss(NT_str);
@@ -88,7 +88,7 @@ int main(int argc, char const *argv[])
     stringstream kbss(kb_str);
     stringstream P0ss(P0_str);
     stringstream Mss(M_str);
-    stringstream volumeRatioss(volumeRatio_str);
+    stringstream tRss(tR_str);
     stringstream seedss(seed_str);
 
     // read into data
@@ -108,7 +108,7 @@ int main(int argc, char const *argv[])
     kbss             >> kb;
     Mss              >> M;
     P0ss             >> P0;
-    volumeRatioss    >> volumeRatio;
+    tRss             >> tR;
     seedss           >> seed;
 
     // cast step dbls to ints
@@ -155,7 +155,7 @@ int main(int argc, char const *argv[])
     cout.precision(10);
     cout << "Running invasion protocol..." << endl;
 
-    tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,0,NT,NPRINTSKIP);
+    tumor3Dobj.invasionConstP(invasionForceUpdate,M,P0,tR,NT,NPRINTSKIP);
     //tumor3Dobj.tumorCompression(Ftol,P0,dt0,0.001);
     
     // say goodbye
@@ -164,6 +164,7 @@ int main(int argc, char const *argv[])
     return 0;
 }
  
+
 
 
 

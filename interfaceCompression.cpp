@@ -14,7 +14,7 @@ const double dphi0= 0.01;	   		// packing fraction increment during initial grow
 const double boxLengthScale = 1.5; 	// neighbor list box size
 const double phi0 = 0.01;		   	// initial packing fraction
 const double dt0 = 0.03;		   	// initial magnitude of time step in units of MD time
-const double Ftol = 1e-7;			// force tolerance during energy min
+const double Ftol = 1e-6;			// force tolerance during energy min
 
 int main(int argc, char const *argv[])
 {
@@ -25,7 +25,7 @@ int main(int argc, char const *argv[])
 	// read in parameters from command line input
  
  
-	string aN_str 			= "28";
+	string aN_str 			= "96";
 	string aNV_str 			= "42";
 	string tNV_str 			= "1";
 	string aDisp_str 		= "0.0";
@@ -35,14 +35,14 @@ int main(int argc, char const *argv[])
 	string volumeRatio_str 	= "45.0";
     string aspectRatio_str  = "1.0";
 	string prt_str 			= "0.2";
-    string kv_str           = "10.0";             // ka
+    string kv_str           = "0.1";             // ka
     string ka_str           = "0.1";             // kl
     string kc_str           = "0.03";             // kc
     string kb_str           = "0.0";             // kb
     string P0_str           = "0.0001";
 	string seed_str 		= "1";
 	string positionFile 	= "/Users/yitongzheng/Documents/Corey/tumor3D/C.test";
-    */
+    
     /*
     string aN_str             = argv[1];
     string aNV_str             = argv[2];
@@ -101,7 +101,7 @@ int main(int argc, char const *argv[])
     
 	// determine number of tumor cells based on volumeRatio and prt
 	//tN = round(aN * volumeRatio * (prt/(1.0 - prt)));
-    tN = 1500;
+    tN = 7000;
 	NCELLS = tN + aN;
 
     cout.precision(10);

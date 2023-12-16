@@ -84,7 +84,7 @@ public:
     // protocols
     void setupCheck();
     void tumorCompression(double Ftol, double Ptol, double dt0, double dphi0);
-    void invasionConstP(tumor3DMemFn forceCall, double M, double P0, double g0, int NT, int NPRINTSKIP);
+    void invasionConstP(tumor3DMemFn forceCall, double M, double P0, double tR, int NT, int NPRINTSKIP);
 
     // print functions
     void printTumorInterface(double t);
