@@ -17,7 +17,7 @@ def keep_last_block(file_path):
 # Example usage
 # keep_last_block('path_to_your_file.txt')
 
-path_file = '/Users/yitongzheng/Documents/Corey/tumor3D/P.pos'
+path_file = '/Users/yitongzheng/Documents/Corey/tumor3D/0425_inv4/11.pos'
 keep_last_block(path_file)
 
 '''
