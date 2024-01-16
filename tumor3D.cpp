@@ -1469,7 +1469,7 @@ void tumor3D::adipocyteECMAdhesionNeighborList(){
     double dx, dy, dz, ri;
     double L1_inv = 1.0 / L[1];
     double L2_inv = 1.0 / L[2];
-    double kDisperse = 0.5;
+    double kDisperse = 1.0;
     double nvtmp = 42.0;
     int numSpring = 6*aN/2;
     double sij_C;
@@ -1503,7 +1503,7 @@ void tumor3D::adipocyteECMAdhesionNeighborList(){
                     lECMList.push_back(sij[ci*aN+cj]*kDisperse);
                 }
                 else {
-                    lECMList.push_back(sij[ci*aN+cj]*2.0);
+                    lECMList.push_back(sij[ci*aN+cj]*1.0);
                 }
                 
             }
@@ -2930,7 +2930,7 @@ void tumor3D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
 }
 
 // invasion at constant pressure
-void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double tR, int NT, int NPRINTSKIP){
+void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double tR, double initL, int NT, int NPRINTSKIP){
     
     default_random_engine gen;
     normal_distribution<double> distribution(0.0, 1.0);
@@ -3010,6 +3010,10 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
     F_wall = (P0 - wpress[0]) * L[1] * L[2];
     
     printTumorInterface(t);
+    //wpos = L[0]-initL;
+    //for (i=0;i<tN;i++){
+    //    x[i*NDIM] = (x[i*NDIM]-L[0])*initL/L[0]+L[0];
+    //}
     for (k=0; k<NT; k++){
         // pbcs and reset forces
         for (i=0; i<vertDOF; i++){
@@ -3148,6 +3152,7 @@ void tumor3D::invasionConstP(tumor3DMemFn forceCall, double M, double P0, double
             
             if ((k+1) % (NPRINTSKIP*10) == 0) {
                 printTumorInterface(t);
+                //cout << "** Fake printing" << endl;
             }
             
             //cooling == 0
